@@ -7,7 +7,7 @@ const SHIPTUNNEL_SERVER_PORT = environment.SHIPTUNNEL_SERVER_PORT;
 const FORWARDED_HOST = environment.FORWARDED_HOST;
 const FORWARDED_PORT = environment.FORWARDED_PORT;
 
-const createShiptunnelClient = () => {
+const createShiptunnelClient = (options: { main?: boolean } = {}) => {
   const shiptunnelClient = new net.Socket();
 
   shiptunnelClient.connect(
@@ -48,11 +48,23 @@ const createShiptunnelClient = () => {
 
   shiptunnelClient.on("end", () => {
     console.log("Disconnected from server");
+    if (options.main) {
+      createShiptunnelClient({
+        main: true,
+      });
+    }
   });
 
   shiptunnelClient.on("error", (err) => {
     console.error("Connection error:", err);
+    if (options.main) {
+      createShiptunnelClient({
+        main: true,
+      });
+    }
   });
 };
 
-createShiptunnelClient();
+createShiptunnelClient({
+  main: true,
+});
