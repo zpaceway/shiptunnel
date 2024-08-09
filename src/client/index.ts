@@ -1,6 +1,7 @@
 import net from "net";
 import { MESSAGES } from "../constants";
 import environment from "./environment";
+import { Socket } from "../types";
 
 const SHIPTUNNEL_SERVER_HOST = environment.SHIPTUNNEL_SERVER_HOST;
 const SHIPTUNNEL_SERVER_PORT = environment.SHIPTUNNEL_SERVER_PORT;
@@ -8,7 +9,7 @@ const FORWARDED_HOST = environment.FORWARDED_HOST;
 const FORWARDED_PORT = environment.FORWARDED_PORT;
 
 const createShiptunnelClient = (options: { main?: boolean } = {}) => {
-  const shiptunnelClient = new net.Socket();
+  const shiptunnelClient: Socket = new net.Socket();
 
   shiptunnelClient.connect(
     SHIPTUNNEL_SERVER_PORT,
@@ -31,7 +32,8 @@ const createShiptunnelClient = (options: { main?: boolean } = {}) => {
     if (incommingDataText === MESSAGES.SHIPTUNNEL_NEW_CLIENT) {
       return createShiptunnelClient();
     }
-    const internalClient = new net.Socket();
+    const internalClient = shiptunnelClient.forwardedSocket || new net.Socket();
+    shiptunnelClient.forwardedSocket = internalClient;
 
     internalClient.connect(FORWARDED_PORT, FORWARDED_HOST, () => {
       internalClient.write(incommingData);
@@ -40,6 +42,7 @@ const createShiptunnelClient = (options: { main?: boolean } = {}) => {
     internalClient.on("data", (responseData) => {
       const responseDataText = responseData.toString();
       shiptunnelClient.write(responseData);
+      shiptunnelClient.forwardedSocket = undefined;
       if (responseDataText.endsWith("\n\r\n\r")) internalClient.end();
     });
   };

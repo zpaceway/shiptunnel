@@ -1,12 +1,7 @@
-import net from "net";
 import { MESSAGES } from "../constants";
 import { Subject } from "rxjs";
 import environment from "./environment";
-
-export type Socket = net.Socket & {
-  forwardedSocket?: Socket;
-  incommingSocket?: Socket;
-};
+import { Socket } from "../types";
 
 class ShiptunnelManager {
   forwardedSockets: Socket[] = [];
