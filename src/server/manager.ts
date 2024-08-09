@@ -1,6 +1,7 @@
 import net from "net";
 import { MESSAGES } from "../constants";
-import { BehaviorSubject, firstValueFrom, Subject } from "rxjs";
+import { Subject } from "rxjs";
+import environment from "./environment";
 
 export type Socket = net.Socket & {
   forwardedSocket?: Socket;
@@ -34,8 +35,13 @@ class ShiptunnelManager {
     console.log("Waiting for new socket to be available...");
 
     return new Promise<Socket | undefined>((res) => {
+      const timeout = setTimeout(
+        () => res(undefined),
+        environment.SHIPTUNNEL_SERVER_MAX_WAIT_FOR_CONNECTION_MS
+      );
       this.newSocketsAvailable.subscribe({
         next: () => {
+          clearTimeout(timeout);
           return res(
             this.forwardedSockets.find((socket) => !socket.incommingSocket)
           );
