@@ -32,19 +32,26 @@ const createShiptunnelClient = (options: { main?: boolean } = {}) => {
     if (incommingDataText === MESSAGES.SHIPTUNNEL_NEW_CLIENT) {
       return createShiptunnelClient();
     }
-    const internalClient = shiptunnelClient.forwardedSocket || new net.Socket();
-    shiptunnelClient.forwardedSocket = internalClient;
 
-    internalClient.connect(FORWARDED_PORT, FORWARDED_HOST, () => {
-      internalClient.write(incommingData);
-    });
+    if (!shiptunnelClient.forwardedSocket) {
+      const internalClient = new net.Socket();
+      shiptunnelClient.forwardedSocket = internalClient;
 
-    internalClient.on("data", (responseData) => {
-      const responseDataText = responseData.toString();
-      shiptunnelClient.write(responseData);
-      shiptunnelClient.forwardedSocket = undefined;
-      if (responseDataText.endsWith("\n\r\n\r")) internalClient.end();
-    });
+      internalClient.connect(FORWARDED_PORT, FORWARDED_HOST, () => {
+        internalClient.write(incommingData);
+      });
+
+      internalClient.on("data", (responseData) => {
+        const responseDataText = responseData.toString();
+        shiptunnelClient.write(responseData);
+        shiptunnelClient.forwardedSocket = undefined;
+        if (responseDataText.endsWith("\n\r\n\r")) internalClient.end();
+      });
+
+      return;
+    }
+
+    shiptunnelClient.forwardedSocket.write(incommingData);
   };
 
   shiptunnelClient.on("data", handleIncommingData);
