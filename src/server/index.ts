@@ -1,7 +1,8 @@
 import net from "net";
-import { Socket, shiptunnelManager } from "./manager";
+import { shiptunnelManager } from "./manager";
 import { MESSAGES } from "../constants";
 import environment from "./environment";
+import { Socket } from "../types";
 
 const tcpServer = net.createServer((socket: Socket) => {
   const handleDisconnection = () => {
