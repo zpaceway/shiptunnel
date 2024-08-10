@@ -3,6 +3,7 @@ import { shiptunnelManager } from "./manager";
 import { HTTP_END_TEXT, MESSAGES } from "../constants";
 import environment from "./environment";
 import { Socket } from "./types";
+import { bufferEndsWith } from "../utils";
 
 class ShiptunnelServer {
   private server: net.Server;
@@ -20,9 +21,7 @@ class ShiptunnelServer {
     socket: Socket,
     incommingData: Buffer
   ): Promise<void> => {
-    const incommingDataText = incommingData.toString();
-
-    if (incommingDataText === MESSAGES.SHIPTUNNEL_CONNECT_SERVER) {
+    if (Buffer.compare(incommingData, MESSAGES.SHIPTUNNEL_CONNECT_SERVER)) {
       console.log(`New client connected`);
       shiptunnelManager.addSocket(socket);
 
@@ -32,7 +31,7 @@ class ShiptunnelServer {
     if (socket.incommingSocket) {
       console.log(`Sending data to incomming socket`);
       socket.incommingSocket.write(incommingData);
-      if (incommingDataText.endsWith(HTTP_END_TEXT)) {
+      if (bufferEndsWith(incommingData, HTTP_END_TEXT)) {
         socket.incommingSocket.end();
         socket.incommingSocket = undefined;
       }

@@ -1,6 +1,7 @@
 import net from "net";
 import { HTTP_500_RESPONSE, HTTP_END_TEXT, MESSAGES } from "../constants";
 import environment from "./environment";
+import { bufferEndsWith } from "../utils";
 
 export class ShiptunnelClient {
   private socket: net.Socket;
@@ -57,9 +58,8 @@ export class ShiptunnelClient {
     );
 
     forwardedSocket.on("data", (forwardedData) => {
-      const forwardedDataText = forwardedData.toString();
       this.socket.write(forwardedData);
-      if (forwardedDataText.endsWith(HTTP_END_TEXT))
+      if (bufferEndsWith(forwardedData, HTTP_END_TEXT))
         this.forwardedSocket?.end();
       this.forwardedSocket = undefined;
     });
@@ -71,10 +71,9 @@ export class ShiptunnelClient {
   };
 
   handleIncommingData = (incommingData: Buffer) => {
-    const incommingDataText = incommingData.toString();
     console.log(`Received request from Shiptunnel`);
 
-    if (incommingDataText === MESSAGES.SHIPTUNNEL_NEW_CLIENT) {
+    if (Buffer.compare(incommingData, MESSAGES.SHIPTUNNEL_NEW_CLIENT)) {
       return this.handleNewClientMessage();
     }
 
