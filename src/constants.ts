@@ -6,3 +6,5 @@ export const MESSAGES = {
     "SHIPTUNNEL_SERVER_KEY"
   ]!}__`,
 };
+
+export const HTTP_END_TEXT = "\r\n\r\n";

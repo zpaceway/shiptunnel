@@ -1,5 +1,5 @@
 import net from "net";
-import { MESSAGES } from "../constants";
+import { HTTP_END_TEXT, MESSAGES } from "../constants";
 import environment from "./environment";
 
 export class ShiptunnelClient {
@@ -16,22 +16,22 @@ export class ShiptunnelClient {
     this.socket.connect(
       environment.SHIPTUNNEL_SERVER_PORT,
       environment.SHIPTUNNEL_SERVER_HOST,
-      () => {
-        this.socket.write(MESSAGES.SHIPTUNNEL_CONNECT_SERVER);
-        console.log(
-          `Client connected to Shiptunnel server at ${environment.SHIPTUNNEL_SERVER_HOST}:${environment.SHIPTUNNEL_SERVER_PORT}`
-        );
-        console.log(
-          `Incomming requests to Shiptunnel server will be forwarded to ${environment.FORWARDED_HOST}:${environment.FORWARDED_PORT}\n\n`
-        );
-      }
+      this.handleClientConnect
     );
 
     this.socket.on("data", this.handleIncommingData);
-
     this.socket.on("end", this.handleDisconnect);
-
     this.socket.on("error", this.handleDisconnect);
+  };
+
+  handleClientConnect = () => {
+    this.socket.write(MESSAGES.SHIPTUNNEL_CONNECT_SERVER);
+    console.log(
+      `Client connected to Shiptunnel server at ${environment.SHIPTUNNEL_SERVER_HOST}:${environment.SHIPTUNNEL_SERVER_PORT}`
+    );
+    console.log(
+      `Incomming requests to Shiptunnel server will be forwarded to ${environment.FORWARDED_HOST}:${environment.FORWARDED_PORT}\n\n`
+    );
   };
 
   handleNewClientMessage = () => {
@@ -54,7 +54,8 @@ export class ShiptunnelClient {
     return forwardedSocket.on("data", (forwardedData) => {
       const forwardedDataText = forwardedData.toString();
       this.socket.write(forwardedData);
-      if (forwardedDataText.endsWith("\n\r\n\r")) this.forwardedSocket?.end();
+      if (forwardedDataText.endsWith(HTTP_END_TEXT))
+        this.forwardedSocket?.end();
       this.forwardedSocket = undefined;
     });
   };

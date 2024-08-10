@@ -1,23 +1,21 @@
 import { MESSAGES } from "../constants";
 import { Subject } from "rxjs";
 import environment from "./environment";
-import { Socket } from "../types";
+import { Socket } from "./types";
 
-class ShiptunnelManager {
-  forwardedSockets: Socket[] = [];
-  newSocketsAvailable = new Subject();
+class SocketsManager {
+  sockets: Socket[] = [];
+  availableSockets$ = new Subject();
 
-  findForwardedSocket(socket: Socket) {
-    return this.forwardedSockets.find((_socket) => socket === _socket);
+  findSocket(socket: Socket) {
+    return this.sockets.find((_socket) => socket === _socket);
   }
 
   async findAvailableSocket() {
     console.log(
       "Trying to find available socket to handle incomming request..."
     );
-    const socket = this.forwardedSockets.find(
-      (socket) => !socket.incommingSocket
-    );
+    const socket = this.sockets.find((socket) => !socket.incommingSocket);
 
     if (socket) return socket;
 
@@ -25,7 +23,7 @@ class ShiptunnelManager {
       "No socket was found, asking the client to create a new socket..."
     );
 
-    this.askClientForNewSocket();
+    this.askForNewSocket();
 
     console.log("Waiting for new socket to be available...");
 
@@ -34,36 +32,29 @@ class ShiptunnelManager {
         () => res(undefined),
         environment.SHIPTUNNEL_SERVER_MAX_WAIT_FOR_CONNECTION_MS
       );
-      this.newSocketsAvailable.subscribe({
+      this.availableSockets$.subscribe({
         next: () => {
           clearTimeout(timeout);
-          return res(
-            this.forwardedSockets.find((socket) => !socket.incommingSocket)
-          );
+          return res(this.sockets.find((socket) => !socket.incommingSocket));
         },
       });
     });
   }
 
-  removeForwardedSocket(socket: Socket) {
-    this.forwardedSockets = this.forwardedSockets.filter(
-      (_socket) => socket !== _socket
-    );
-    this.newSocketsAvailable.next(true);
+  removeSocket(socket: Socket) {
+    this.sockets = this.sockets.filter((_socket) => socket !== _socket);
+    this.availableSockets$.next(true);
   }
 
-  addForwardedSocket(socket: Socket) {
-    this.forwardedSockets = [...this.forwardedSockets, socket];
-    this.newSocketsAvailable.next(true);
+  addSocket(socket: Socket) {
+    this.sockets = [...this.sockets, socket];
+    this.availableSockets$.next(true);
   }
 
-  askClientForNewSocket() {
-    const forwardedHostIndex =
-      (Math.random() * this.forwardedSockets.length) | 0;
-    this.forwardedSockets[forwardedHostIndex]?.write(
-      MESSAGES.SHIPTUNNEL_NEW_CLIENT
-    );
+  askForNewSocket() {
+    const socketsIndex = (Math.random() * this.sockets.length) | 0;
+    this.sockets[socketsIndex]?.write(MESSAGES.SHIPTUNNEL_NEW_CLIENT);
   }
 }
 
-export const shiptunnelManager = new ShiptunnelManager();
+export const shiptunnelManager = new SocketsManager();

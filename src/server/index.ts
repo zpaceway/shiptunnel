@@ -1,41 +1,39 @@
 import net from "net";
 import { shiptunnelManager } from "./manager";
-import { MESSAGES } from "../constants";
+import { HTTP_END_TEXT, MESSAGES } from "../constants";
 import environment from "./environment";
-import { Socket } from "../types";
+import { Socket } from "./types";
 
-const tcpServer = net.createServer((socket: Socket) => {
-  const handleDisconnection = () => {
-    const forwardedSocket = shiptunnelManager.findForwardedSocket(socket);
-    if (forwardedSocket) {
-      shiptunnelManager.removeForwardedSocket(forwardedSocket);
-      return console.log("Client disconnected");
-    }
+class ShiptunnelServer {
+  private server: net.Server;
 
-    if (socket.forwardedSocket) {
-      console.log("Disconneting incomming socket from forwarded socket");
-      if (
-        socket.forwardedSocket.incommingSocket &&
-        shiptunnelManager.forwardedSockets.length > 3
-      ) {
-        socket.forwardedSocket.incommingSocket.end();
-      }
-      socket.forwardedSocket.incommingSocket = undefined;
-      socket.forwardedSocket = undefined;
-    }
-  };
-  const handleIncommingData = async (incommingData: Buffer, retry = 0) => {
+  constructor() {
+    this.server = net.createServer((socket: Socket) => {
+      socket.on("data", (data) => this.handleIncommingData(socket, data));
+      socket.on("close", () => this.handleDisconnection(socket));
+      socket.on("end", () => this.handleDisconnection(socket));
+      socket.on("error", () => this.handleDisconnection(socket));
+    });
+  }
+
+  handleIncommingData = async (
+    socket: Socket,
+    incommingData: Buffer,
+    retry = 0
+  ): Promise<void> => {
     const incommingDataText = incommingData.toString();
 
     if (incommingDataText === MESSAGES.SHIPTUNNEL_CONNECT_SERVER) {
       console.log(`New client connected`);
-      return shiptunnelManager.addForwardedSocket(socket);
+      shiptunnelManager.addSocket(socket);
+
+      return;
     }
 
     if (socket.incommingSocket) {
       console.log(`Sending data to incomming socket`);
       socket.incommingSocket.write(incommingData);
-      if (incommingDataText.endsWith("r\n\r\n")) {
+      if (incommingDataText.endsWith(HTTP_END_TEXT)) {
         socket.incommingSocket.end();
         socket.incommingSocket = undefined;
       }
@@ -49,9 +47,10 @@ const tcpServer = net.createServer((socket: Socket) => {
     if (!forwardedSocket) {
       console.log("No available socket was found to handle request");
       if (retry < environment.SHIPTUNNEL_SERVER_MAX_CONNECTION_RETRY_ATTEMPTS) {
-        return handleIncommingData(incommingData, retry + 1);
+        return this.handleIncommingData(socket, incommingData, retry + 1);
       }
-      return socket.end();
+      socket.end();
+      return;
     }
 
     forwardedSocket.incommingSocket = socket;
@@ -60,17 +59,34 @@ const tcpServer = net.createServer((socket: Socket) => {
     forwardedSocket.write(incommingData);
   };
 
-  socket.on("data", handleIncommingData);
+  handleDisconnection = (socket: Socket) => {
+    const forwardedSocket = shiptunnelManager.findSocket(socket);
+    if (forwardedSocket) {
+      shiptunnelManager.removeSocket(forwardedSocket);
+      return console.log("Client disconnected");
+    }
 
-  socket.on("close", handleDisconnection);
+    if (socket.forwardedSocket) {
+      console.log("Disconneting incomming socket from forwarded socket");
+      if (
+        socket.forwardedSocket.incommingSocket &&
+        shiptunnelManager.sockets.length > 3
+      ) {
+        socket.forwardedSocket.incommingSocket.end();
+      }
+      socket.forwardedSocket.incommingSocket = undefined;
+      socket.forwardedSocket = undefined;
+    }
+  };
 
-  socket.on("end", handleDisconnection);
+  listen = () => {
+    this.server.listen(environment.SHIPTUNNEL_SERVER_PORT, () => {
+      console.log(
+        `Shiptunnel server running at port ${environment.SHIPTUNNEL_SERVER_PORT}\n\n`
+      );
+    });
+  };
+}
 
-  socket.on("error", handleDisconnection);
-});
-
-tcpServer.listen(environment.SHIPTUNNEL_SERVER_PORT, () => {
-  console.log(
-    `Shiptunnel server running at port ${environment.SHIPTUNNEL_SERVER_PORT}\n\n`
-  );
-});
+const shiptunnelServer = new ShiptunnelServer();
+shiptunnelServer.listen();
