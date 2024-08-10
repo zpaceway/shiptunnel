@@ -18,8 +18,7 @@ class ShiptunnelServer {
 
   handleIncommingData = async (
     socket: Socket,
-    incommingData: Buffer,
-    retry = 0
+    incommingData: Buffer
   ): Promise<void> => {
     const incommingDataText = incommingData.toString();
 
@@ -31,11 +30,10 @@ class ShiptunnelServer {
     }
 
     if (socket.incommingSocket) {
-      console.log(`Sending data to incomming socket ${incommingData}`);
+      console.log(`Sending data to incomming socket`);
       socket.incommingSocket.write(incommingData);
       if (incommingDataText.endsWith(HTTP_END_TEXT)) {
         socket.incommingSocket.end();
-        socket.incommingSocket = undefined;
       }
 
       return;
@@ -46,10 +44,8 @@ class ShiptunnelServer {
 
     if (!forwardedSocket) {
       console.log("No available socket was found to handle request");
-      if (retry < environment.SHIPTUNNEL_SERVER_MAX_CONNECTION_RETRY_ATTEMPTS) {
-        return this.handleIncommingData(socket, incommingData, retry + 1);
-      }
       socket.end();
+
       return;
     }
 
