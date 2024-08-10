@@ -9,7 +9,7 @@ export const MESSAGES = {
 
 export const HTTP_END_TEXT = "\r\n\r\n";
 
-const HTTP_500_RESPONSE_BODY =
+const http500responseBody =
   `<html>\r\n` +
   `<head><title>500 Internal Server Error</title></head>\r\n` +
   `<body>\r\n` +
@@ -18,11 +18,11 @@ const HTTP_500_RESPONSE_BODY =
   `</body>\r\n` +
   `</html>\r\n`;
 
-const contentLength = Buffer.byteLength(HTTP_500_RESPONSE_BODY, "utf-8");
+const contentLength = Buffer.byteLength(http500responseBody, "utf-8");
 
 export const HTTP_500_RESPONSE =
   `HTTP/1.1 500 Internal Server Error\r\n` +
   `Content-Type: text/html; charset=UTF-8\r\n` +
   `Content-Length: ${contentLength}\r\n` +
   `Connection: close\r\n\r\n` +
-  HTTP_500_RESPONSE_BODY;
+  http500responseBody;
