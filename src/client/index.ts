@@ -1,5 +1,5 @@
 import net from "net";
-import { HTTP_END_TEXT, MESSAGES } from "../constants";
+import { HTTP_500_RESPONSE, HTTP_END_TEXT, MESSAGES } from "../constants";
 import environment from "./environment";
 
 export class ShiptunnelClient {
@@ -59,21 +59,7 @@ export class ShiptunnelClient {
       this.forwardedSocket = undefined;
     });
 
-    forwardedSocket.on("error", () =>
-      this.socket.write(`HTTP/1.1 500 Internal Server Error
-        Content-Type: text/html; charset=UTF-8
-        Content-Length: 137
-        Connection: close
-
-        <html>
-        <head><title>500 Internal Server Error</title></head>
-        <body>
-        <h1>Internal Server Error</h1>
-        <p>An unexpected error occurred.</p>
-        </body>
-        </html>
-      `)
-    );
+    forwardedSocket.on("error", () => this.socket.write(HTTP_500_RESPONSE));
 
     return;
   };
