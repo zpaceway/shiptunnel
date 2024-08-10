@@ -60,7 +60,19 @@ export class ShiptunnelClient {
     });
 
     forwardedSocket.on("error", () =>
-      console.log("Error connecting to forwarded server")
+      this.socket.write(`HTTP/1.1 500 Internal Server Error
+        Content-Type: text/html; charset=UTF-8
+        Content-Length: 137
+        Connection: close
+
+        <html>
+        <head><title>500 Internal Server Error</title></head>
+        <body>
+        <h1>Internal Server Error</h1>
+        <p>An unexpected error occurred.</p>
+        </body>
+        </html>
+      `)
     );
 
     return;
