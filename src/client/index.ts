@@ -59,7 +59,10 @@ export class ShiptunnelClient {
       this.forwardedSocket = undefined;
     });
 
-    forwardedSocket.on("error", () => this.socket.write(HTTP_500_RESPONSE));
+    forwardedSocket.on("error", () => {
+      this.socket.write(HTTP_500_RESPONSE);
+      this.forwardedSocket = undefined;
+    });
 
     return;
   };
