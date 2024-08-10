@@ -51,13 +51,19 @@ export class ShiptunnelClient {
       }
     );
 
-    return forwardedSocket.on("data", (forwardedData) => {
+    forwardedSocket.on("data", (forwardedData) => {
       const forwardedDataText = forwardedData.toString();
       this.socket.write(forwardedData);
       if (forwardedDataText.endsWith(HTTP_END_TEXT))
         this.forwardedSocket?.end();
       this.forwardedSocket = undefined;
     });
+
+    forwardedSocket.on("error", () =>
+      console.log("Error connecting to forwarded server")
+    );
+
+    return;
   };
 
   handleIncommingData = (incommingData: Buffer) => {
