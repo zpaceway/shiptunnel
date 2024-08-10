@@ -31,7 +31,7 @@ class ShiptunnelServer {
     }
 
     if (socket.incommingSocket) {
-      console.log(`Sending data to incomming socket`);
+      console.log(`Sending data to incomming socket ${incommingData}`);
       socket.incommingSocket.write(incommingData);
       if (incommingDataText.endsWith(HTTP_END_TEXT)) {
         socket.incommingSocket.end();
