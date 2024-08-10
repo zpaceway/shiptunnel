@@ -1,80 +1,91 @@
 import net from "net";
 import { MESSAGES } from "../constants";
 import environment from "./environment";
-import { Socket } from "../types";
 
-const SHIPTUNNEL_SERVER_HOST = environment.SHIPTUNNEL_SERVER_HOST;
-const SHIPTUNNEL_SERVER_PORT = environment.SHIPTUNNEL_SERVER_PORT;
-const FORWARDED_HOST = environment.FORWARDED_HOST;
-const FORWARDED_PORT = environment.FORWARDED_PORT;
+export class ShiptunnelClient {
+  private socket: net.Socket;
+  private primary: boolean;
+  private forwardedSocket?: net.Socket;
 
-const createShiptunnelClient = (options: { main?: boolean } = {}) => {
-  const shiptunnelClient: Socket = new net.Socket();
+  constructor(options: { primary?: boolean } = {}) {
+    this.socket = new net.Socket();
+    this.primary = !!options.primary;
+  }
 
-  shiptunnelClient.connect(
-    SHIPTUNNEL_SERVER_PORT,
-    SHIPTUNNEL_SERVER_HOST,
-    () => {
-      shiptunnelClient.write(MESSAGES.SHIPTUNNEL_CONNECT_SERVER);
-      console.log(
-        `Client connected to Shiptunnel server at ${SHIPTUNNEL_SERVER_HOST}:${SHIPTUNNEL_SERVER_PORT}`
-      );
-      console.log(
-        `Incomming requests to Shiptunnel server will be forwarded to ${FORWARDED_HOST}:${FORWARDED_PORT}\n\n`
-      );
-    }
-  );
+  listen = () => {
+    this.socket.connect(
+      environment.SHIPTUNNEL_SERVER_PORT,
+      environment.SHIPTUNNEL_SERVER_HOST,
+      () => {
+        this.socket.write(MESSAGES.SHIPTUNNEL_CONNECT_SERVER);
+        console.log(
+          `Client connected to Shiptunnel server at ${environment.SHIPTUNNEL_SERVER_HOST}:${environment.SHIPTUNNEL_SERVER_PORT}`
+        );
+        console.log(
+          `Incomming requests to Shiptunnel server will be forwarded to ${environment.FORWARDED_HOST}:${environment.FORWARDED_PORT}\n\n`
+        );
+      }
+    );
 
-  const handleIncommingData = (incommingData: Buffer) => {
+    this.socket.on("data", this.handleIncommingData);
+
+    this.socket.on("end", this.handleDisconnect);
+
+    this.socket.on("error", this.handleDisconnect);
+  };
+
+  handleNewClientMessage = () => {
+    const shiptunnelClient = new ShiptunnelClient();
+    shiptunnelClient.listen();
+  };
+
+  handleNewForwardedData = (incommingData: Buffer) => {
+    const forwardedSocket = new net.Socket();
+    this.forwardedSocket = forwardedSocket;
+
+    forwardedSocket.connect(
+      environment.FORWARDED_PORT,
+      environment.FORWARDED_HOST,
+      () => {
+        forwardedSocket.write(incommingData);
+      }
+    );
+
+    return forwardedSocket.on("data", (forwardedData) => {
+      const forwardedDataText = forwardedData.toString();
+      this.socket.write(forwardedData);
+      if (forwardedDataText.endsWith("\n\r\n\r")) this.forwardedSocket?.end();
+      this.forwardedSocket = undefined;
+    });
+  };
+
+  handleIncommingData = (incommingData: Buffer) => {
     const incommingDataText = incommingData.toString();
     console.log(`Received request from Shiptunnel`);
 
     if (incommingDataText === MESSAGES.SHIPTUNNEL_NEW_CLIENT) {
-      return createShiptunnelClient();
+      return this.handleNewClientMessage();
     }
 
-    if (!shiptunnelClient.forwardedSocket) {
-      const internalClient = new net.Socket();
-      shiptunnelClient.forwardedSocket = internalClient;
-
-      internalClient.connect(FORWARDED_PORT, FORWARDED_HOST, () => {
-        internalClient.write(incommingData);
-      });
-
-      internalClient.on("data", (responseData) => {
-        const responseDataText = responseData.toString();
-        shiptunnelClient.write(responseData);
-        shiptunnelClient.forwardedSocket = undefined;
-        if (responseDataText.endsWith("\n\r\n\r")) internalClient.end();
-      });
-
-      return;
+    if (!this.forwardedSocket) {
+      return this.handleNewForwardedData(incommingData);
     }
 
-    shiptunnelClient.forwardedSocket.write(incommingData);
+    this.forwardedSocket.write(incommingData);
   };
 
-  shiptunnelClient.on("data", handleIncommingData);
-
-  shiptunnelClient.on("end", () => {
+  handleDisconnect = () => {
     console.log("Disconnected from server");
-    if (options.main) {
-      createShiptunnelClient({
-        main: true,
-      });
-    }
-  });
+    if (!this.primary) return;
 
-  shiptunnelClient.on("error", (err) => {
-    console.error("Connection error:", err);
-    if (options.main) {
-      createShiptunnelClient({
-        main: true,
-      });
-    }
-  });
-};
+    const shiptunnelClient = new ShiptunnelClient({
+      primary: true,
+    });
+    shiptunnelClient.listen();
+  };
+}
 
-createShiptunnelClient({
-  main: true,
+const shiptunnelClient = new ShiptunnelClient({
+  primary: true,
 });
+shiptunnelClient.listen();
