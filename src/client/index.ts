@@ -73,7 +73,7 @@ export class ShiptunnelClient {
   handleIncommingData = (incommingData: Buffer) => {
     console.log(`Received request from Shiptunnel`);
 
-    if (Buffer.compare(incommingData, MESSAGES.SHIPTUNNEL_NEW_CLIENT)) {
+    if (incommingData.equals(MESSAGES.SHIPTUNNEL_NEW_CLIENT)) {
       return this.handleNewClientMessage();
     }
 

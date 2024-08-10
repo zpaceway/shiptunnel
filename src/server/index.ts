@@ -21,7 +21,7 @@ class ShiptunnelServer {
     socket: Socket,
     incommingData: Buffer
   ): Promise<void> => {
-    if (Buffer.compare(incommingData, MESSAGES.SHIPTUNNEL_CONNECT_SERVER)) {
+    if (incommingData.equals(MESSAGES.SHIPTUNNEL_CONNECT_SERVER)) {
       console.log(`New client connected`);
       shiptunnelManager.addSocket(socket);
 
