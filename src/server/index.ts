@@ -34,6 +34,7 @@ class ShiptunnelServer {
       socket.incommingSocket.write(incommingData);
       if (incommingDataText.endsWith(HTTP_END_TEXT)) {
         socket.incommingSocket.end();
+        socket.incommingSocket = undefined;
       }
 
       return;

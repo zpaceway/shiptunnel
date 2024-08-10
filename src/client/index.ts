@@ -24,6 +24,11 @@ export class ShiptunnelClient {
     this.socket.on("error", this.handleDisconnect);
   };
 
+  handleErrorResponse = () => {
+    this.socket.write(HTTP_500_RESPONSE);
+    this.forwardedSocket = undefined;
+  };
+
   handleClientConnect = () => {
     this.socket.write(MESSAGES.SHIPTUNNEL_CONNECT_SERVER);
     console.log(
@@ -59,10 +64,8 @@ export class ShiptunnelClient {
       this.forwardedSocket = undefined;
     });
 
-    forwardedSocket.on("error", () => {
-      this.socket.write(HTTP_500_RESPONSE);
-      this.forwardedSocket = undefined;
-    });
+    forwardedSocket.on("error", this.handleErrorResponse);
+    forwardedSocket.on("timeout", this.handleErrorResponse);
 
     return;
   };
