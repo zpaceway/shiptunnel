@@ -95,7 +95,7 @@ export class ShiptunnelServer {
 
   findAvailableClient = (domain: string) => {
     console.log(
-      "Trying to find available client to handle incomming request..."
+      `Trying to find available client to handle incomming request to ${domain}...`
     );
     const client = this.clients[domain]?.find(
       (client) => !client.incommingSocket
