@@ -103,6 +103,8 @@ export class ShiptunnelServer {
 
     logger.log(`Available client for ${domain} found`);
 
+    logger.log(client);
+
     return client;
   };
 
