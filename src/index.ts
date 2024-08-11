@@ -30,7 +30,7 @@ program
       fport: parseInt(options.fport || "8080"),
       poolSize: parseInt(options.poolSize || "5"),
       shost: options.shost || "localhost",
-      sport: parseInt(options.sport || "5374"),
+      sport: parseInt(options.sport || "3333"),
       skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
     };
 
@@ -54,7 +54,7 @@ program
   .action((options: OptionalString<TServerOptions>) => {
     const serverOptions: TServerOptions = {
       skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
-      sport: parseInt(options.sport || "5374"),
+      sport: parseInt(options.sport || "3333"),
       stimeout: parseInt(options.stimeout || "1000"),
     };
 
