@@ -7,10 +7,14 @@ export class ShiptunnelClient {
   private manager: ShiptunnelClientManager;
   serverSocket: net.Socket;
   forwardedSocket?: net.Socket;
+  keyBuffer: Buffer;
 
   constructor({ manager }: { manager: ShiptunnelClientManager }) {
     this.manager = manager;
     this.serverSocket = new net.Socket();
+    this.keyBuffer = Buffer.from(
+      `SHIPTUNNEL_CONNECT_SERVER__${manager.options.skey}`
+    );
   }
 
   listen = () => {
@@ -76,7 +80,7 @@ export class ShiptunnelClient {
   handleIncommingData = (incommingData: Buffer) => {
     console.log(`Received request from Shiptunnel`);
 
-    if (incommingData.equals(MESSAGES.SHIPTUNNEL_NEW_CLIENT)) {
+    if (incommingData.equals(this.keyBuffer)) {
       return this.manager.addNewClient();
     }
 
