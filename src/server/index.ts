@@ -1,12 +1,16 @@
 import net from "net";
-import { HTTP_END_TEXT, MESSAGES } from "../constants";
+import {
+  generateHttp500responseMessage,
+  generateNewClientMessage,
+  parseIncommingData,
+  SHIPTUNNEL_CLIENT_CONNECT_MESSAGE,
+} from "../communication";
 import { TServerOptions, TSocket } from "../types";
-import { bufferEndsWith } from "../utils";
 
 export class ShiptunnelServer {
   private server: net.Server;
   private options: TServerOptions;
-  private sockets: TSocket[] = [];
+  private clients: Record<string, TSocket[]> = {};
 
   constructor({ options }: { options: TServerOptions }) {
     this.options = options;
@@ -18,33 +22,33 @@ export class ShiptunnelServer {
     });
   }
 
-  handleIncommingData = (socket: TSocket, incommingData: Buffer): void => {
-    if (
-      incommingData.equals(
-        Buffer.from(
-          `${MESSAGES.SHIPTUNNEL_CONNECT_SERVER}__${this.options.skey}`
-        )
-      )
-    ) {
-      console.log(`New client connected`);
-      this.addSocket(socket);
+  handleIncommingData = (socket: TSocket, incommingData: Buffer) => {
+    const { domain, shiptunnelKey, shiptunnelMessage } =
+      parseIncommingData(incommingData);
 
-      return;
+    if (!domain) {
+      socket.write(generateHttp500responseMessage());
+      return socket.end();
+    }
+
+    socket.domain = domain;
+
+    if (
+      shiptunnelKey === this.options.skey &&
+      shiptunnelMessage === SHIPTUNNEL_CLIENT_CONNECT_MESSAGE
+    ) {
+      return this.addClient(socket);
     }
 
     if (socket.incommingSocket) {
       console.log(`Sending data to incomming socket`);
       socket.incommingSocket.write(incommingData);
-      if (bufferEndsWith(incommingData, HTTP_END_TEXT)) {
-        socket.incommingSocket.end();
-        socket.incommingSocket = undefined;
-      }
-
+      console.log("Data successfully sent to the incomming socket");
       return;
     }
 
     const forwardedSocket =
-      socket.forwardedSocket || this.findAvailableSocket();
+      socket.forwardedSocket || this.findAvailableClient(domain);
 
     if (!forwardedSocket) {
       console.log("No available socket was found to handle request");
@@ -62,15 +66,13 @@ export class ShiptunnelServer {
   handleDisconnection = (socket: TSocket) => {
     const forwardedSocket = this.findSocket(socket);
     if (forwardedSocket) {
-      this.removeSocket(forwardedSocket);
+      this.removeClient(forwardedSocket);
       return console.log("Client disconnected");
     }
 
     if (socket.forwardedSocket) {
       console.log("Disconneting incomming socket from forwarded socket");
-      if (socket.forwardedSocket.incommingSocket && this.sockets.length > 3) {
-        socket.forwardedSocket.incommingSocket.end();
-      }
+      socket.forwardedSocket.incommingSocket?.end();
       socket.forwardedSocket.incommingSocket = undefined;
       socket.forwardedSocket = undefined;
     }
@@ -84,31 +86,46 @@ export class ShiptunnelServer {
     });
   };
 
-  findSocket(socket: TSocket) {
-    return this.sockets.find((_socket) => socket === _socket);
-  }
+  findSocket = (socket: TSocket) => {
+    if (!socket.domain) return undefined;
+    return this.clients[socket.domain]?.find((_socket) => socket === _socket);
+  };
 
-  findAvailableSocket() {
+  findAvailableClient = (domain: string) => {
     console.log(
-      "Trying to find available socket to handle incomming request..."
+      "Trying to find available client to handle incomming request..."
     );
-    const socket = this.sockets.find((socket) => !socket.incommingSocket);
-
-    return socket;
-  }
-
-  removeSocket(socket: TSocket) {
-    this.sockets = this.sockets.filter((_socket) => socket !== _socket);
-  }
-
-  addSocket(socket: TSocket) {
-    this.sockets = [...this.sockets, socket];
-  }
-
-  askForNewSocket() {
-    const socketsIndex = (Math.random() * this.sockets.length) | 0;
-    this.sockets[socketsIndex]?.write(
-      `${MESSAGES.SHIPTUNNEL_NEW_CLIENT}__${this.options.skey}`
+    const client = this.clients[domain]?.find(
+      (client) => !client.incommingSocket
     );
-  }
+
+    return client;
+  };
+
+  removeClient = (client: TSocket) => {
+    if (!client.domain) return;
+    this.clients[client.domain] = (this.clients[client.domain] || []).filter(
+      (_client) => client !== _client
+    );
+  };
+
+  addClient = (client: TSocket) => {
+    if (!client.domain)
+      return console.log("Can not add client because no domain was found");
+    console.log(`Adding new client to ${client.domain}`);
+    this.clients[client.domain] = [
+      ...(this.clients[client.domain] || []),
+      client,
+    ];
+    console.log(`New client connected`);
+  };
+
+  askForNewClient = (domain: string) => {
+    this.clients[domain] = this.clients[domain] || [];
+    const clients = this.clients[domain];
+    const clientIndex = (Math.random() * clients.length) | 0;
+    clients[clientIndex]?.write(
+      generateNewClientMessage(domain, this.options.skey)
+    );
+  };
 }

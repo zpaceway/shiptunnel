@@ -1,7 +1,11 @@
 import net from "net";
-import { HTTP_500_RESPONSE, HTTP_END_TEXT, MESSAGES } from "../constants";
-import { bufferEndsWith } from "../utils";
 import { ShiptunnelClientManager } from "./manager";
+import {
+  generateClientConnectMessage,
+  generateHttp500responseMessage,
+  parseIncommingData,
+  SHIPTUNNEL_NEW_CLIENT_MESSAGE,
+} from "../communication";
 
 export class ShiptunnelClient {
   private manager: ShiptunnelClientManager;
@@ -17,23 +21,27 @@ export class ShiptunnelClient {
     this.serverSocket.connect(
       this.manager.options.sport,
       this.manager.options.shost,
-      this.handleClientConnect
+      this.handleServerSocketConnect
     );
 
     this.serverSocket.on("data", this.handleIncommingData);
-    this.serverSocket.on("end", this.handleDisconnect);
-    this.serverSocket.on("error", this.handleDisconnect);
+    this.serverSocket.on("end", this.disconnect);
+    this.serverSocket.on("close", this.disconnect);
+    this.serverSocket.on("error", this.disconnect);
+    this.serverSocket.on("timeout", this.disconnect);
   };
 
-  handleErrorResponse = () => {
-    this.serverSocket.write(HTTP_500_RESPONSE);
-    this.forwardedSocket = undefined;
-    this.manager.checkPoolStatus();
+  sendErrorResponse = () => {
+    this.serverSocket.write(generateHttp500responseMessage());
+    this.disconnectForwardedSocket();
   };
 
-  handleClientConnect = () => {
+  handleServerSocketConnect = () => {
     this.serverSocket.write(
-      `${MESSAGES.SHIPTUNNEL_CONNECT_SERVER}__${this.manager.options.skey}`
+      generateClientConnectMessage(
+        this.manager.options.fhost,
+        this.manager.options.skey
+      )
     );
     console.log(
       `Client connected to Shiptunnel server at ${this.manager.options.shost}:${this.manager.options.sport}`
@@ -56,21 +64,19 @@ export class ShiptunnelClient {
       }
     );
 
-    forwardedSocket.on("data", (forwardedData) => {
-      this.serverSocket.write(forwardedData);
-      if (bufferEndsWith(forwardedData, HTTP_END_TEXT))
-        this.forwardedSocket?.end();
-    });
-
-    forwardedSocket.on("close", this.handleForwardedSocketDisconnection);
-    forwardedSocket.on("end", this.handleForwardedSocketDisconnection);
-    forwardedSocket.on("error", this.handleErrorResponse);
-    forwardedSocket.on("timeout", this.handleErrorResponse);
+    forwardedSocket.on("data", (forwardedData) =>
+      this.serverSocket.write(forwardedData)
+    );
+    forwardedSocket.on("close", this.disconnectForwardedSocket);
+    forwardedSocket.on("end", this.disconnectForwardedSocket);
+    forwardedSocket.on("error", this.sendErrorResponse);
+    forwardedSocket.on("timeout", this.sendErrorResponse);
 
     return;
   };
 
-  handleForwardedSocketDisconnection = () => {
+  disconnectForwardedSocket = () => {
+    this.forwardedSocket?.end();
     this.forwardedSocket = undefined;
     this.manager.checkPoolStatus();
   };
@@ -78,12 +84,12 @@ export class ShiptunnelClient {
   handleIncommingData = (incommingData: Buffer) => {
     console.log(`Received request from Shiptunnel`);
 
+    const { shiptunnelKey, shiptunnelMessage } =
+      parseIncommingData(incommingData);
+
     if (
-      incommingData.equals(
-        Buffer.from(
-          `${MESSAGES.SHIPTUNNEL_NEW_CLIENT}__${this.manager.options.skey}`
-        )
-      )
+      this.manager.options.skey === shiptunnelKey &&
+      shiptunnelMessage === SHIPTUNNEL_NEW_CLIENT_MESSAGE
     ) {
       return this.manager.addNewClient();
     }
@@ -95,7 +101,8 @@ export class ShiptunnelClient {
     this.forwardedSocket.write(incommingData);
   };
 
-  handleDisconnect = () => {
+  disconnect = () => {
+    this.serverSocket.end();
     this.manager.handleDisconnect(this);
   };
 }
