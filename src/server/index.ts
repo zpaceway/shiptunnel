@@ -6,6 +6,7 @@ import {
   SHIPTUNNEL_CLIENT_CONNECT_MESSAGE,
 } from "../communication";
 import { TServerOptions, TSocket } from "../types";
+import logger from "../logger";
 
 export class ShiptunnelServer {
   private server: net.Server;
@@ -26,12 +27,12 @@ export class ShiptunnelServer {
     const { domain, shiptunnelKey, shiptunnelMessage } =
       parseIncommingData(incommingData);
 
-    if (!domain) {
+    socket.shiptunnelDomain = socket.shiptunnelDomain || domain;
+
+    if (!socket.shiptunnelDomain) {
       socket.write(generateHttp500responseMessage());
       return socket.end();
     }
-
-    socket.shiptunnelDomain = domain;
 
     if (
       shiptunnelKey === this.options.skey &&
@@ -41,37 +42,33 @@ export class ShiptunnelServer {
     }
 
     if (socket.incommingSocket) {
-      console.log(`Sending data to incomming socket`);
+      logger.log(`Sending data to incomming socket`);
       socket.incommingSocket.write(incommingData);
-      console.log("Data successfully sent to the incomming socket");
+      logger.log("Data successfully sent to the incomming socket");
       return;
     }
 
     const forwardedSocket =
-      socket.forwardedSocket || this.findAvailableClient(domain);
+      socket.forwardedSocket ||
+      this.findAvailableClient(socket.shiptunnelDomain);
 
-    if (!forwardedSocket) {
-      console.log("No available socket was found to handle request");
-      socket.end();
-
-      return;
-    }
+    if (!forwardedSocket) return socket.end();
 
     forwardedSocket.incommingSocket = socket;
     socket.forwardedSocket = forwardedSocket;
-    console.log("Sending data to socket forwarded socket");
+    logger.log("Sending data to socket forwarded socket");
     forwardedSocket.write(incommingData);
   };
 
   handleDisconnection = (socket: TSocket) => {
-    const forwardedSocket = this.findSocket(socket);
-    if (forwardedSocket) {
-      this.removeClient(forwardedSocket);
-      return console.log("Client disconnected");
+    const client = this.findClient(socket);
+    if (client) {
+      this.removeClient(client);
+      return logger.log("Client disconnected");
     }
 
     if (socket.forwardedSocket) {
-      console.log("Disconneting incomming socket from forwarded socket");
+      logger.log("Disconneting incomming socket from forwarded socket");
       socket.forwardedSocket.incommingSocket?.end();
       socket.forwardedSocket.incommingSocket = undefined;
       socket.forwardedSocket = undefined;
@@ -80,28 +77,31 @@ export class ShiptunnelServer {
 
   listen = () => {
     this.server.listen(this.options.sport, () => {
-      console.log(
-        `Shiptunnel server running at port ${this.options.sport}\n\n`
-      );
+      logger.log(`Shiptunnel server running at port ${this.options.sport}`);
     });
   };
 
-  findSocket = (socket: TSocket) => {
-    if (!socket.shiptunnelDomain) return undefined;
-    return this.clients[socket.shiptunnelDomain]?.find(
-      (_socket) => socket === _socket
+  findClient = (client: TSocket) => {
+    if (!client.shiptunnelDomain) return undefined;
+    return this.clients[client.shiptunnelDomain]?.find(
+      (_client) => client === _client
     );
   };
 
   findAvailableClient = (domain: string) => {
-    console.log(
+    logger.log(
       `Trying to find available client to handle incomming request to ${domain}...`
     );
     const client = this.clients[domain]?.find(
       (client) => !client.incommingSocket
     );
 
-    if (!client) this.askForNewClient(domain);
+    if (!client) {
+      logger.log(`No available client for ${domain} was found`);
+      return this.askForNewClient(domain);
+    }
+
+    logger.log(`Available client for ${domain} found`);
 
     return client;
   };
@@ -115,19 +115,17 @@ export class ShiptunnelServer {
 
   addClient = (client: TSocket) => {
     if (!client.shiptunnelDomain)
-      return console.log("Can not add client because no domain was found");
-    console.log(`Adding new client to ${client.shiptunnelDomain}`);
+      return logger.log("Can not add client because no domain was found");
+    logger.log(`Adding new client to ${client.shiptunnelDomain}`);
     this.clients[client.shiptunnelDomain] = [
       ...(this.clients[client.shiptunnelDomain] || []),
       client,
     ];
-    console.log(`New client connected`);
+    logger.log(`New client connected`);
   };
 
   askForNewClient = (domain: string) => {
-    console.log(
-      `Trying to ask clients for ${domain} to create new connections`
-    );
+    logger.log(`Trying to ask clients for ${domain} to create new connections`);
     this.clients[domain] = this.clients[domain] || [];
     const clients = this.clients[domain];
     const clientIndex = (Math.random() * clients.length) | 0;

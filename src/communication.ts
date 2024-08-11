@@ -1,3 +1,5 @@
+import logger from "./logger";
+
 export const SHIPTUNNEL_NEW_CLIENT_MESSAGE = "__NEW_CLIENT__";
 export const SHIPTUNNEL_CLIENT_CONNECT_MESSAGE = "__CLIENT_CONNECT__";
 
@@ -60,15 +62,18 @@ export const generateNewClientMessage = (domain: string, skey: string) => {
 };
 
 export const parseIncommingData = (incommingData: Buffer) => {
-  const request = incommingData.toString();
-  const hostHeader = request.match(/Host: (.+?)(\r\n|\n)/i);
+  const data = incommingData.toString();
+  const head = data.split("\r\n\r\n")[0] || "";
+  const hostHeader = head.match(/Host: (.+?)(\r\n|\n)/i);
   const domain = hostHeader?.[1]?.trim();
-  const shiptunnelKeyHeader = request.match(/Shiptunnel-Key: (.+?)(\r\n|\n)/i);
-  const shiptunnelMessageHeader = request.match(
+  const shiptunnelKeyHeader = head.match(/Shiptunnel-Key: (.+?)(\r\n|\n)/i);
+  const shiptunnelMessageHeader = head.match(
     /Shiptunnel-Message: (.+?)(\r\n|\n)/i
   );
   const shiptunnelKey = shiptunnelKeyHeader?.[1]?.trim();
   const shiptunnelMessage = shiptunnelMessageHeader?.[1]?.trim();
+
+  logger.log(`Incomming data \n${head}`);
 
   return {
     domain,

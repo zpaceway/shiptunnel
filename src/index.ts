@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { OptionalString, TClientOptions, TServerOptions } from "./types";
 import { ShiptunnelServer } from "./server";
 import { ShiptunnelClientManager } from "./client/manager";
+import logger from "./logger";
 
 dotenv.config();
 
@@ -34,10 +35,7 @@ program
       skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
     };
 
-    console.log(
-      "Running client with the following parameters:",
-      managerOptions
-    );
+    logger.log("Running client with the following parameters:", managerOptions);
 
     const manager = new ShiptunnelClientManager(managerOptions);
     manager.run();
@@ -58,7 +56,7 @@ program
       stimeout: parseInt(options.stimeout || "1000"),
     };
 
-    console.log("Running server with the following parameters:", serverOptions);
+    logger.log("Running server with the following parameters:", serverOptions);
 
     const server = new ShiptunnelServer({ options: serverOptions });
     server.listen();

@@ -6,6 +6,7 @@ import {
   parseIncommingData,
   SHIPTUNNEL_NEW_CLIENT_MESSAGE,
 } from "../communication";
+import logger from "../logger";
 
 export class ShiptunnelClient {
   private manager: ShiptunnelClientManager;
@@ -39,15 +40,17 @@ export class ShiptunnelClient {
   handleServerSocketConnect = () => {
     this.serverSocket.write(
       generateClientConnectMessage(
-        this.manager.options.shost,
+        this.manager.options.shost === "localhost"
+          ? `${this.manager.options.shost}:${this.manager.options.sport}`
+          : this.manager.options.shost,
         this.manager.options.skey
       )
     );
-    console.log(
+    logger.log(
       `Client connected to Shiptunnel server at ${this.manager.options.shost}:${this.manager.options.sport}`
     );
-    console.log(
-      `Incomming requests to Shiptunnel server will be forwarded to ${this.manager.options.fhost}:${this.manager.options.fport}\n\n`
+    logger.log(
+      `Incomming requests to Shiptunnel server will be forwarded to ${this.manager.options.fhost}:${this.manager.options.fport}`
     );
   };
 
@@ -64,9 +67,9 @@ export class ShiptunnelClient {
       }
     );
 
-    forwardedSocket.on("data", (forwardedData) =>
-      this.serverSocket.write(forwardedData)
-    );
+    forwardedSocket.on("data", (forwardedData) => {
+      return this.serverSocket.write(forwardedData);
+    });
     forwardedSocket.on("close", this.disconnectForwardedSocket);
     forwardedSocket.on("end", this.disconnectForwardedSocket);
     forwardedSocket.on("error", this.sendErrorResponse);
@@ -82,7 +85,7 @@ export class ShiptunnelClient {
   };
 
   handleIncommingData = (incommingData: Buffer) => {
-    console.log(`Received request from Shiptunnel`);
+    logger.log(`Received request from Shiptunnel`);
 
     const { shiptunnelKey, shiptunnelMessage } =
       parseIncommingData(incommingData);

@@ -1,4 +1,5 @@
 import { ShiptunnelClient } from ".";
+import logger from "../logger";
 import { TClientOptions } from "../types";
 
 export class ShiptunnelClientManager {
@@ -26,13 +27,14 @@ export class ShiptunnelClientManager {
   };
 
   handleDisconnect = (client: ShiptunnelClient) => {
-    console.log("Disconnected from server");
+    logger.log("Disconnected from server");
     this.clients = this.clients.filter((_client) => _client !== client);
 
     this.checkPoolStatus();
   };
 
   addNewClient = () => {
+    logger.log("Adding new client");
     const shiptunnelClient = new ShiptunnelClient({ manager: this });
     shiptunnelClient.listen();
 
