@@ -7,11 +7,9 @@ export class ShiptunnelServer {
   private server: net.Server;
   private options: TServerOptions;
   private sockets: TSocket[] = [];
-  private keyBuffer: Buffer;
 
   constructor({ options }: { options: TServerOptions }) {
     this.options = options;
-    this.keyBuffer = Buffer.from(`SHIPTUNNEL_CONNECT_SERVER__${options.skey}`);
     this.server = net.createServer((socket: TSocket) => {
       socket.on("data", (data) => this.handleIncommingData(socket, data));
       socket.on("close", () => this.handleDisconnection(socket));
@@ -21,7 +19,13 @@ export class ShiptunnelServer {
   }
 
   handleIncommingData = (socket: TSocket, incommingData: Buffer): void => {
-    if (incommingData.equals(this.keyBuffer)) {
+    if (
+      incommingData.equals(
+        Buffer.from(
+          `${MESSAGES.SHIPTUNNEL_CONNECT_SERVER}__${this.options.skey}`
+        )
+      )
+    ) {
       console.log(`New client connected`);
       this.addSocket(socket);
 
@@ -103,6 +107,8 @@ export class ShiptunnelServer {
 
   askForNewSocket() {
     const socketsIndex = (Math.random() * this.sockets.length) | 0;
-    this.sockets[socketsIndex]?.write(MESSAGES.SHIPTUNNEL_NEW_CLIENT);
+    this.sockets[socketsIndex]?.write(
+      `${MESSAGES.SHIPTUNNEL_NEW_CLIENT}__${this.options.skey}`
+    );
   }
 }
