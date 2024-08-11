@@ -57,7 +57,9 @@ export class ShiptunnelServer {
     forwardedSocket.incommingSocket = socket;
     socket.forwardedSocket = forwardedSocket;
     logger.log("Sending data to socket forwarded socket");
-    forwardedSocket.write(incommingData);
+    forwardedSocket.write(incommingData, (err) => {
+      logger.log(`Failed to send data ${err}`);
+    });
   };
 
   handleDisconnection = (socket: TSocket) => {
