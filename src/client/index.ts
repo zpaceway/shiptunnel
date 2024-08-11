@@ -39,7 +39,7 @@ export class ShiptunnelClient {
   handleServerSocketConnect = () => {
     this.serverSocket.write(
       generateClientConnectMessage(
-        this.manager.options.fhost,
+        this.manager.options.shost,
         this.manager.options.skey
       )
     );

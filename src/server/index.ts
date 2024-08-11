@@ -101,6 +101,8 @@ export class ShiptunnelServer {
       (client) => !client.incommingSocket
     );
 
+    if (!client) this.askForNewClient(domain);
+
     return client;
   };
 
@@ -123,6 +125,9 @@ export class ShiptunnelServer {
   };
 
   askForNewClient = (domain: string) => {
+    console.log(
+      `Trying to ask clients for ${domain} to create new connections`
+    );
     this.clients[domain] = this.clients[domain] || [];
     const clients = this.clients[domain];
     const clientIndex = (Math.random() * clients.length) | 0;
