@@ -64,7 +64,10 @@ export class ShiptunnelServer {
   };
 
   handleDisconnection = (socket: TSocket) => {
-    socket.incommingSocket?.end();
+    if (socket.incommingSocket) {
+      console.log("Disconnecting incomming socket");
+      socket.incommingSocket?.end();
+    }
 
     const forwardedSocket = this.findSocket(socket);
     if (forwardedSocket) {
