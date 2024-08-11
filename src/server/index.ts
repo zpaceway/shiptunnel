@@ -1,15 +1,16 @@
 import net from "net";
-import { shiptunnelManager } from "./manager";
 import { HTTP_END_TEXT, MESSAGES } from "../constants";
-import environment from "./environment";
-import { Socket } from "./types";
+import { TServerOptions, TSocket } from "../types";
 import { bufferEndsWith } from "../utils";
 
-class ShiptunnelServer {
+export class ShiptunnelServer {
   private server: net.Server;
+  private options: TServerOptions;
+  private sockets: TSocket[] = [];
 
-  constructor() {
-    this.server = net.createServer((socket: Socket) => {
+  constructor({ options }: { options: TServerOptions }) {
+    this.options = options;
+    this.server = net.createServer((socket: TSocket) => {
       socket.on("data", (data) => this.handleIncommingData(socket, data));
       socket.on("close", () => this.handleDisconnection(socket));
       socket.on("end", () => this.handleDisconnection(socket));
@@ -17,13 +18,10 @@ class ShiptunnelServer {
     });
   }
 
-  handleIncommingData = async (
-    socket: Socket,
-    incommingData: Buffer
-  ): Promise<void> => {
+  handleIncommingData = (socket: TSocket, incommingData: Buffer): void => {
     if (incommingData.equals(MESSAGES.SHIPTUNNEL_CONNECT_SERVER)) {
       console.log(`New client connected`);
-      shiptunnelManager.addSocket(socket);
+      this.addSocket(socket);
 
       return;
     }
@@ -40,7 +38,7 @@ class ShiptunnelServer {
     }
 
     const forwardedSocket =
-      socket.forwardedSocket || (await shiptunnelManager.findAvailableSocket());
+      socket.forwardedSocket || this.findAvailableSocket();
 
     if (!forwardedSocket) {
       console.log("No available socket was found to handle request");
@@ -55,19 +53,16 @@ class ShiptunnelServer {
     forwardedSocket.write(incommingData);
   };
 
-  handleDisconnection = (socket: Socket) => {
-    const forwardedSocket = shiptunnelManager.findSocket(socket);
+  handleDisconnection = (socket: TSocket) => {
+    const forwardedSocket = this.findSocket(socket);
     if (forwardedSocket) {
-      shiptunnelManager.removeSocket(forwardedSocket);
+      this.removeSocket(forwardedSocket);
       return console.log("Client disconnected");
     }
 
     if (socket.forwardedSocket) {
       console.log("Disconneting incomming socket from forwarded socket");
-      if (
-        socket.forwardedSocket.incommingSocket &&
-        shiptunnelManager.sockets.length > 3
-      ) {
+      if (socket.forwardedSocket.incommingSocket && this.sockets.length > 3) {
         socket.forwardedSocket.incommingSocket.end();
       }
       socket.forwardedSocket.incommingSocket = undefined;
@@ -76,13 +71,36 @@ class ShiptunnelServer {
   };
 
   listen = () => {
-    this.server.listen(environment.SHIPTUNNEL_SERVER_PORT, () => {
+    this.server.listen(this.options.sport, () => {
       console.log(
-        `Shiptunnel server running at port ${environment.SHIPTUNNEL_SERVER_PORT}\n\n`
+        `Shiptunnel server running at port ${this.options.sport}\n\n`
       );
     });
   };
-}
 
-const shiptunnelServer = new ShiptunnelServer();
-shiptunnelServer.listen();
+  findSocket(socket: TSocket) {
+    return this.sockets.find((_socket) => socket === _socket);
+  }
+
+  findAvailableSocket() {
+    console.log(
+      "Trying to find available socket to handle incomming request..."
+    );
+    const socket = this.sockets.find((socket) => !socket.incommingSocket);
+
+    return socket;
+  }
+
+  removeSocket(socket: TSocket) {
+    this.sockets = this.sockets.filter((_socket) => socket !== _socket);
+  }
+
+  addSocket(socket: TSocket) {
+    this.sockets = [...this.sockets, socket];
+  }
+
+  askForNewSocket() {
+    const socketsIndex = (Math.random() * this.sockets.length) | 0;
+    this.sockets[socketsIndex]?.write(MESSAGES.SHIPTUNNEL_NEW_CLIENT);
+  }
+}

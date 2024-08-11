@@ -1,0 +1,41 @@
+import { ShiptunnelClient } from ".";
+import { TClientOptions } from "../types";
+
+export class ShiptunnelClientManager {
+  options: TClientOptions;
+  private clients: ShiptunnelClient[] = [];
+
+  constructor(options: TClientOptions) {
+    this.options = options;
+  }
+
+  run = () => {
+    for (let i = 0; i < this.options.poolSize; i++) {
+      this.addNewClient();
+    }
+  };
+
+  checkPoolStatus = () => {
+    if (
+      this.clients.filter((_client) => !_client.forwardedSocket).length >=
+      this.options.poolSize
+    )
+      return;
+
+    this.addNewClient();
+  };
+
+  handleDisconnect = (client: ShiptunnelClient) => {
+    console.log("Disconnected from server");
+    this.clients = this.clients.filter((_client) => _client !== client);
+
+    this.checkPoolStatus();
+  };
+
+  addNewClient = () => {
+    const shiptunnelClient = new ShiptunnelClient({ manager: this });
+    shiptunnelClient.listen();
+
+    this.clients.push(shiptunnelClient);
+  };
+}
