@@ -110,7 +110,7 @@ export class ShiptunnelServer {
     if (!client.shiptunnelDomain) return;
     this.clients[client.shiptunnelDomain] = (
       this.clients[client.shiptunnelDomain] || []
-    ).filter((_client) => client !== _client);
+    ).filter((_client) => _client === client);
   };
 
   addClient = (client: TSocket) => {
@@ -121,7 +121,11 @@ export class ShiptunnelServer {
       ...(this.clients[client.shiptunnelDomain] || []),
       client,
     ];
-    logger.log(`New client connected`);
+    logger.log(
+      `New client connected, currently available clients ${
+        this.clients[client.shiptunnelDomain]?.length || 0
+      }`
+    );
   };
 
   askForNewClient = (domain: string) => {
