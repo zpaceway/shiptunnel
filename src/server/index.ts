@@ -31,7 +31,7 @@ export class ShiptunnelServer {
       return socket.end();
     }
 
-    socket.domain = domain;
+    socket.shiptunnelDomain = domain;
 
     if (
       shiptunnelKey === this.options.skey &&
@@ -87,8 +87,10 @@ export class ShiptunnelServer {
   };
 
   findSocket = (socket: TSocket) => {
-    if (!socket.domain) return undefined;
-    return this.clients[socket.domain]?.find((_socket) => socket === _socket);
+    if (!socket.shiptunnelDomain) return undefined;
+    return this.clients[socket.shiptunnelDomain]?.find(
+      (_socket) => socket === _socket
+    );
   };
 
   findAvailableClient = (domain: string) => {
@@ -103,18 +105,18 @@ export class ShiptunnelServer {
   };
 
   removeClient = (client: TSocket) => {
-    if (!client.domain) return;
-    this.clients[client.domain] = (this.clients[client.domain] || []).filter(
-      (_client) => client !== _client
-    );
+    if (!client.shiptunnelDomain) return;
+    this.clients[client.shiptunnelDomain] = (
+      this.clients[client.shiptunnelDomain] || []
+    ).filter((_client) => client !== _client);
   };
 
   addClient = (client: TSocket) => {
-    if (!client.domain)
+    if (!client.shiptunnelDomain)
       return console.log("Can not add client because no domain was found");
-    console.log(`Adding new client to ${client.domain}`);
-    this.clients[client.domain] = [
-      ...(this.clients[client.domain] || []),
+    console.log(`Adding new client to ${client.shiptunnelDomain}`);
+    this.clients[client.shiptunnelDomain] = [
+      ...(this.clients[client.shiptunnelDomain] || []),
       client,
     ];
     console.log(`New client connected`);

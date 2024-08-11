@@ -3,7 +3,7 @@ import net from "net";
 export type TSocket = net.Socket & {
   forwardedSocket?: TSocket;
   incommingSocket?: TSocket;
-  domain?: string;
+  shiptunnelDomain?: string;
 };
 
 export type TClientOptions = {
