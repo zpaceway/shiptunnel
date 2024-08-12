@@ -151,7 +151,7 @@ export class ShiptunnelServer {
     client.lastPongAt = new Date();
     setInterval(() => {
       const fiveMinAgo = new Date();
-      fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 60 * 1);
+      fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 5 * 1);
       if (client.lastPongAt && client.lastPongAt < fiveMinAgo) {
         client.end();
       }
@@ -159,7 +159,7 @@ export class ShiptunnelServer {
         return;
       }
       client.write("ping");
-    }, 5000);
+    }, 1000);
     this.clients[client.shiptunnelDomain] = [
       ...(this.clients[client.shiptunnelDomain] || []),
       client,
