@@ -72,7 +72,7 @@ export const parseIncommingData = (data: string) => {
   const shiptunnelKey = shiptunnelKeyHeader?.[1]?.trim();
   const shiptunnelMessage = shiptunnelMessageHeader?.[1]?.trim();
 
-  logger.log(`Incomming data \n${head.substring(0, 200)}`);
+  logger.log(`Incomming data \n${head.substring(0, 400)}`);
 
   return {
     domain,

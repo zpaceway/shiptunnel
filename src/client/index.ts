@@ -26,15 +26,15 @@ export class ShiptunnelClient {
     );
 
     this.serverSocket.on("data", this.handleIncommingData);
-    this.serverSocket.on("end", this.disconnect);
-    this.serverSocket.on("close", this.disconnect);
-    this.serverSocket.on("error", this.disconnect);
-    this.serverSocket.on("timeout", this.disconnect);
+    this.serverSocket.on("end", () => this.disconnect("end"));
+    this.serverSocket.on("close", () => this.disconnect("close"));
+    this.serverSocket.on("error", () => this.disconnect("error"));
+    this.serverSocket.on("timeout", () => this.disconnect("timeout"));
   };
 
   sendErrorResponse = () => {
     this.serverSocket.write(generateHttp500responseMessage());
-    this.disconnectForwardedSocket();
+    this.disconnectForwardedSocket("error");
   };
 
   handleServerSocketConnect = () => {
@@ -70,13 +70,14 @@ export class ShiptunnelClient {
     forwardedSocket.on("data", (incommingData) =>
       this.serverSocket.write(incommingData)
     );
-    forwardedSocket.on("close", this.disconnectForwardedSocket);
-    forwardedSocket.on("end", this.disconnectForwardedSocket);
-    forwardedSocket.on("error", this.sendErrorResponse);
-    forwardedSocket.on("timeout", this.sendErrorResponse);
+    forwardedSocket.on("close", () => this.disconnectForwardedSocket("close"));
+    forwardedSocket.on("end", () => this.disconnectForwardedSocket("end"));
+    forwardedSocket.on("error", () => this.sendErrorResponse());
+    forwardedSocket.on("timeout", () => this.sendErrorResponse());
   };
 
-  disconnectForwardedSocket = () => {
+  disconnectForwardedSocket = (reason: string) => {
+    logger.log(`Disconnected forwarded socket with reason ${reason}`);
     this.forwardedSocket?.end();
     this.forwardedSocket = undefined;
     this.manager.checkPoolStatus();
@@ -104,8 +105,8 @@ export class ShiptunnelClient {
     this.forwardedSocket.write(incommingData);
   };
 
-  disconnect = () => {
+  disconnect = (reason: string) => {
     this.serverSocket.end();
-    this.manager.disconnect(this);
+    this.manager.disconnect(this, reason);
   };
 }

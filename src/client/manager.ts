@@ -26,9 +26,11 @@ export class ShiptunnelClientManager {
     this.addNewClient();
   };
 
-  disconnect = (client: ShiptunnelClient) => {
-    logger.log("Disconnected from server");
+  disconnect = (client: ShiptunnelClient, reason: string) => {
     this.clients = this.clients.filter((_client) => _client !== client);
+    logger.log(
+      `Disconnected from server with reason ${reason}, currently managed clients ${this.clients.length}`
+    );
 
     this.checkPoolStatus();
   };

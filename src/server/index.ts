@@ -165,7 +165,7 @@ export class ShiptunnelServer {
         this.removeClient(socket);
         clearInterval(interval);
       }
-      if (!socket.client?.shouldSendPing || socket.client?.incommingSocket) {
+      if (!socket.client?.shouldSendPing) {
         return;
       }
       socket.write("ping");
