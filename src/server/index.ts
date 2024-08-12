@@ -34,7 +34,7 @@ export class ShiptunnelServer {
     if (data === "pong") {
       socket.lastPongAt = new Date();
       socket.shouldSendPing = true;
-      return socket.write("ping");
+      return;
     }
 
     const { domain, shiptunnelKey, shiptunnelMessage } =
