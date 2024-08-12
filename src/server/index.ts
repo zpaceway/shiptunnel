@@ -116,8 +116,8 @@ export class ShiptunnelServer {
     if (!client) {
       logger.log(`No available client for ${domain} was found`);
       this.askForNewClient(domain);
-      return new Promise<TSocket | undefined>((res, rej) => {
-        const timeout = setTimeout(() => rej(undefined), this.options.stimeout);
+      return new Promise<TSocket | undefined>((res) => {
+        const timeout = setTimeout(() => res(undefined), this.options.stimeout);
         this.availableClient$.subscribe({
           next: () => {
             const client = this.clients[domain]?.find(
