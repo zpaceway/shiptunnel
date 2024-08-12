@@ -33,6 +33,7 @@ export class ShiptunnelServer {
 
     if (data === "pong") {
       socket.lastPongAt = new Date();
+      socket.shouldSendPing = true;
       return socket.write("ping");
     }
 
@@ -158,7 +159,7 @@ export class ShiptunnelServer {
         return;
       }
       client.write("ping");
-    }, 1000);
+    }, 5000);
     this.clients[client.shiptunnelDomain] = [
       ...(this.clients[client.shiptunnelDomain] || []),
       client,
