@@ -5,21 +5,26 @@ import {
   parseIncommingData,
   SHIPTUNNEL_CLIENT_CONNECT_MESSAGE,
 } from "../communication";
-import { TServerOptions, TSocket } from "../types";
+import {
+  TServerOptions,
+  TShiptunnelClientSocket,
+  TShiptunnelIncommingSocket,
+  TShiptunnelSocket,
+} from "../types";
 import logger from "../logger";
 import { Subject } from "rxjs";
 
 export class ShiptunnelServer {
   private server: net.Server;
   private options: TServerOptions;
-  private clients: Record<string, TSocket[]> = {};
+  private clients: Record<string, TShiptunnelClientSocket[]> = {};
   private availableClient$: Subject<void> = new Subject();
 
   constructor({ options }: { options: TServerOptions }) {
     this.options = options;
     this.server = net.createServer(
       { allowHalfOpen: true },
-      (socket: TSocket) => {
+      (socket: TShiptunnelSocket) => {
         socket.on("data", (data) => this.handleIncommingData(socket, data));
         socket.on("close", () => this.handleDisconnection(socket));
         socket.on("end", () => this.handleDisconnection(socket));
@@ -28,12 +33,15 @@ export class ShiptunnelServer {
     );
   }
 
-  handleIncommingData = async (socket: TSocket, incommingData: Buffer) => {
+  handleIncommingData = async (
+    socket: TShiptunnelSocket,
+    incommingData: Buffer
+  ) => {
     const data = incommingData.toString();
 
-    if (data === "pong") {
-      socket.lastPongAt = new Date();
-      socket.shouldSendPing = true;
+    if (data === "pong" && (socket as TShiptunnelClientSocket).client) {
+      (socket as TShiptunnelClientSocket).client.lastPongAt = new Date();
+      (socket as TShiptunnelClientSocket).client.shouldSendPing = true;
       return;
     }
 
@@ -51,44 +59,52 @@ export class ShiptunnelServer {
       shiptunnelKey === this.options.skey &&
       shiptunnelMessage === SHIPTUNNEL_CLIENT_CONNECT_MESSAGE
     ) {
-      return this.addClient(socket);
+      return this.addClient(socket as TShiptunnelClientSocket);
     }
 
-    if (socket.incommingSocket) {
+    if ((socket as TShiptunnelClientSocket).client?.incommingSocket) {
       logger.log(`Sending data to incomming socket`);
-      socket.incommingSocket.write(incommingData);
+      (socket as TShiptunnelClientSocket).client.incommingSocket?.write(
+        incommingData
+      );
       logger.log("Data successfully sent to the incomming socket");
       return;
     }
 
-    const forwardedSocket =
-      socket.forwardedSocket ||
+    const clientSocket =
+      (socket as TShiptunnelIncommingSocket).incomming?.forwardedSocket ||
       (await this.findAvailableClient(socket.shiptunnelDomain));
 
-    if (!forwardedSocket) return socket.end();
+    if (!clientSocket?.client) return socket.end();
 
-    forwardedSocket.incommingSocket = socket;
-    socket.forwardedSocket = forwardedSocket;
+    clientSocket.client.incommingSocket = socket;
+    (socket as TShiptunnelIncommingSocket).incomming = {
+      forwardedSocket: clientSocket,
+    };
     logger.log("Sending data to socket forwarded socket");
 
-    forwardedSocket.write(incommingData, (err) => {
+    clientSocket.write(incommingData, (err) => {
       if (!err) return;
       logger.log(`Failed to send data ${err}`);
     });
   };
 
-  handleDisconnection = (socket: TSocket) => {
-    const client = this.findClient(socket);
-    if (client) {
-      this.removeClient(client);
+  handleDisconnection = (socket: TShiptunnelSocket) => {
+    const clientSocket = this.findClient(socket);
+    if (clientSocket) {
+      this.removeClient(clientSocket);
       return logger.log("Client disconnected");
     }
 
-    if (socket.forwardedSocket) {
+    const incommingSocket = socket as TShiptunnelIncommingSocket;
+    if (incommingSocket.incomming?.forwardedSocket) {
       logger.log("Disconneting incomming socket from forwarded socket");
-      socket.forwardedSocket.incommingSocket?.end();
-      socket.forwardedSocket.incommingSocket = undefined;
-      socket.forwardedSocket = undefined;
+      incommingSocket.incomming.forwardedSocket?.client.incommingSocket?.end();
+      if (incommingSocket.incomming.forwardedSocket?.client) {
+        incommingSocket.incomming.forwardedSocket.client.incommingSocket =
+          undefined;
+        incommingSocket.incomming.forwardedSocket = undefined;
+      }
     }
   };
 
@@ -98,7 +114,7 @@ export class ShiptunnelServer {
     });
   };
 
-  findClient = (client: TSocket) => {
+  findClient = (client: TShiptunnelSocket) => {
     if (!client.shiptunnelDomain) return undefined;
     return this.clients[client.shiptunnelDomain]?.find(
       (_client) => client === _client
@@ -109,23 +125,23 @@ export class ShiptunnelServer {
     logger.log(
       `Trying to find available client to handle incomming request to ${domain}...`
     );
-    const client = this.clients[domain]?.find(
-      (client) => !client.incommingSocket
+    const clientSocket = this.clients[domain]?.find(
+      (_socket) => _socket.client && !_socket.client.incommingSocket
     );
 
-    if (!client) {
+    if (!clientSocket) {
       logger.log(`No available client for ${domain} was found`);
       this.askForNewClient(domain);
-      return new Promise<TSocket | undefined>((res) => {
+      return new Promise<TShiptunnelClientSocket | undefined>((res) => {
         const timeout = setTimeout(() => res(undefined), this.options.stimeout);
         this.availableClient$.subscribe({
           next: () => {
-            const client = this.clients[domain]?.find(
-              (client) => !client.incommingSocket
+            const clientSocket = this.clients[domain]?.find(
+              (_socket) => _socket.client && !_socket.client.incommingSocket
             );
-            if (!client) return;
+            if (!clientSocket) return;
             clearTimeout(timeout);
-            res(client);
+            res(clientSocket);
           },
         });
       });
@@ -133,41 +149,40 @@ export class ShiptunnelServer {
 
     logger.log(`Available client for ${domain} found`);
 
-    return client;
+    return clientSocket;
   };
 
-  removeClient = (client: TSocket) => {
-    if (!client.shiptunnelDomain) return;
-    client.end();
-    this.clients[client.shiptunnelDomain] = (
-      this.clients[client.shiptunnelDomain] || []
-    ).filter((_client) => _client === client);
+  removeClient = (socket: TShiptunnelSocket) => {
+    if (!socket.shiptunnelDomain) return;
+    socket.end();
+    this.clients[socket.shiptunnelDomain] = (
+      this.clients[socket.shiptunnelDomain] || []
+    ).filter((_socket) => _socket === socket);
   };
 
-  addClient = (client: TSocket) => {
-    if (!client.shiptunnelDomain)
+  addClient = (socket: TShiptunnelClientSocket) => {
+    if (!socket.shiptunnelDomain)
       return logger.log("Can not add client because no domain was found");
-    logger.log(`Adding new client to ${client.shiptunnelDomain}`);
-    client.shouldSendPing = true;
-    client.lastPongAt = new Date();
+    logger.log(`Adding new client to ${socket.shiptunnelDomain}`);
+    socket.client = { shouldSendPing: true, lastPongAt: new Date() };
     setInterval(() => {
       const fiveMinAgo = new Date();
       fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 5 * 1);
-      if (client.lastPongAt && client.lastPongAt < fiveMinAgo) {
-        this.removeClient(client);
+      if (socket.client?.lastPongAt && socket.client.lastPongAt < fiveMinAgo) {
+        this.removeClient(socket);
       }
-      if (!client.shouldSendPing && client.forwardedSocket) {
+      if (!socket.client?.shouldSendPing || socket.client?.incommingSocket) {
         return;
       }
-      client.write("ping");
+      socket.write("ping");
     }, 1000);
-    this.clients[client.shiptunnelDomain] = [
-      ...(this.clients[client.shiptunnelDomain] || []),
-      client,
+    this.clients[socket.shiptunnelDomain] = [
+      ...(this.clients[socket.shiptunnelDomain] || []),
+      socket,
     ];
     logger.log(
       `New client connected, currently available clients ${
-        this.clients[client.shiptunnelDomain]?.length || 0
+        this.clients[socket.shiptunnelDomain]?.length || 0
       }`
     );
   };

@@ -67,15 +67,11 @@ export class ShiptunnelClient {
       }
     );
 
-    forwardedSocket.on("data", (forwardedData) => {
-      return this.serverSocket.write(forwardedData);
-    });
+    forwardedSocket.on("data", this.serverSocket.write);
     forwardedSocket.on("close", this.disconnectForwardedSocket);
     forwardedSocket.on("end", this.disconnectForwardedSocket);
     forwardedSocket.on("error", this.sendErrorResponse);
     forwardedSocket.on("timeout", this.sendErrorResponse);
-
-    return;
   };
 
   disconnectForwardedSocket = () => {
@@ -108,6 +104,6 @@ export class ShiptunnelClient {
 
   disconnect = () => {
     this.serverSocket.end();
-    this.manager.handleDisconnect(this);
+    this.manager.disconnect(this);
   };
 }

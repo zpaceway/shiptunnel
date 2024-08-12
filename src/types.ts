@@ -1,11 +1,21 @@
 import net from "net";
 
-export type TSocket = net.Socket & {
-  forwardedSocket?: TSocket;
-  incommingSocket?: TSocket;
+export type TShiptunnelSocket = net.Socket & {
   shiptunnelDomain?: string;
-  shouldSendPing?: boolean;
-  lastPongAt?: Date;
+};
+
+export type TShiptunnelClientSocket = TShiptunnelSocket & {
+  client: {
+    shouldSendPing: boolean;
+    lastPongAt: Date;
+    incommingSocket?: TShiptunnelSocket;
+  };
+};
+
+export type TShiptunnelIncommingSocket = TShiptunnelSocket & {
+  incomming: {
+    forwardedSocket?: TShiptunnelClientSocket;
+  };
 };
 
 export type TClientOptions = {

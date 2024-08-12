@@ -1,11 +1,8 @@
-import dotenv from "dotenv";
 import { Command } from "commander";
 import { OptionalString, TClientOptions, TServerOptions } from "./types";
 import { ShiptunnelServer } from "./server";
 import { ShiptunnelClientManager } from "./client/manager";
 import logger from "./logger";
-
-dotenv.config();
 
 const program = new Command();
 
