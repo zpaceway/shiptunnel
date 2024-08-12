@@ -85,10 +85,10 @@ export class ShiptunnelClient {
   };
 
   handleIncommingData = (incommingData: Buffer) => {
-    logger.log(`Received request from Shiptunnel`);
+    const data = incommingData.toString();
+    if (data === "ping") return this.serverSocket.write("pong");
 
-    const { shiptunnelKey, shiptunnelMessage } =
-      parseIncommingData(incommingData);
+    const { shiptunnelKey, shiptunnelMessage } = parseIncommingData(data);
 
     if (
       this.manager.options.skey === shiptunnelKey &&

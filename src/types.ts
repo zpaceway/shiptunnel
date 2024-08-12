@@ -4,6 +4,8 @@ export type TSocket = net.Socket & {
   forwardedSocket?: TSocket;
   incommingSocket?: TSocket;
   shiptunnelDomain?: string;
+  shouldSendPing?: boolean;
+  lastPongAt?: Date;
 };
 
 export type TClientOptions = {
@@ -12,7 +14,7 @@ export type TClientOptions = {
   sport: number;
   fhost: string;
   fport: number;
-  poolSize: number;
+  psize: number;
 };
 
 export type TServerOptions = {

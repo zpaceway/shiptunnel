@@ -24,12 +24,12 @@ program
   .option("--sport <server-port>", "The server port")
   .option("--fport <forwarded-port>", "The forwarded port")
   .option("--fhost <forwarded-host>", "The forwarded host")
-  .option("--poolSize <pool-size>", "The connection pool size")
+  .option("--psize <pool-size>", "The connection pool size")
   .action((options: OptionalString<TClientOptions>) => {
     const managerOptions: TClientOptions = {
       fhost: options.fhost || "localhost",
       fport: parseInt(options.fport || "8080"),
-      poolSize: parseInt(options.poolSize || "5"),
+      psize: parseInt(options.psize || "5"),
       shost: options.shost || "localhost",
       sport: parseInt(options.sport || "3333"),
       skey: options.skey || "43942ad8e78e446b9422550c84431f2f",

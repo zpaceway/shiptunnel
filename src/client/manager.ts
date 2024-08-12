@@ -11,7 +11,7 @@ export class ShiptunnelClientManager {
   }
 
   run = () => {
-    for (let i = 0; i < this.options.poolSize; i++) {
+    for (let i = 0; i < this.options.psize; i++) {
       this.addNewClient();
     }
   };
@@ -19,7 +19,7 @@ export class ShiptunnelClientManager {
   checkPoolStatus = () => {
     if (
       this.clients.filter((_client) => !_client.forwardedSocket).length >=
-      this.options.poolSize
+      this.options.psize
     )
       return;
 

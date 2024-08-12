@@ -61,8 +61,7 @@ export const generateNewClientMessage = (domain: string, skey: string) => {
   );
 };
 
-export const parseIncommingData = (incommingData: Buffer) => {
-  const data = incommingData.toString();
+export const parseIncommingData = (data: string) => {
   const head = data.split("\r\n\r\n")[0] || "";
   const hostHeader = head.match(/Host: (.+?)(\r\n|\n)/i);
   const domain = hostHeader?.[1]?.trim();

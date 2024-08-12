@@ -29,8 +29,15 @@ export class ShiptunnelServer {
   }
 
   handleIncommingData = async (socket: TSocket, incommingData: Buffer) => {
+    const data = incommingData.toString();
+
+    if (data === "pong") {
+      socket.lastPongAt = new Date();
+      return socket.write("ping");
+    }
+
     const { domain, shiptunnelKey, shiptunnelMessage } =
-      parseIncommingData(incommingData);
+      parseIncommingData(data);
 
     socket.shiptunnelDomain = socket.shiptunnelDomain || domain;
 
@@ -139,6 +146,19 @@ export class ShiptunnelServer {
     if (!client.shiptunnelDomain)
       return logger.log("Can not add client because no domain was found");
     logger.log(`Adding new client to ${client.shiptunnelDomain}`);
+    client.shouldSendPing = true;
+    client.lastPongAt = new Date();
+    setInterval(() => {
+      const fiveMinAgo = new Date();
+      fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 60 * 1);
+      if (client.lastPongAt && client.lastPongAt < fiveMinAgo) {
+        client.end();
+      }
+      if (!client.shouldSendPing) {
+        return;
+      }
+      client.write("ping");
+    }, 1000);
     this.clients[client.shiptunnelDomain] = [
       ...(this.clients[client.shiptunnelDomain] || []),
       client,
