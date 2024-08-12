@@ -74,10 +74,6 @@ export class ShiptunnelClient {
     forwardedSocket.on("end", this.disconnectForwardedSocket);
     forwardedSocket.on("error", this.sendErrorResponse);
     forwardedSocket.on("timeout", this.sendErrorResponse);
-    forwardedSocket.on("ping", () => {
-      console.log("received ping");
-      this.serverSocket.emit("pong");
-    });
 
     return;
   };
@@ -90,6 +86,9 @@ export class ShiptunnelClient {
 
   handleIncommingData = (incommingData: Buffer) => {
     const data = incommingData.toString();
+    if (data === "ping") return this.serverSocket.write("pong");
+
+    logger.log(`Received request from Shiptunnel`);
 
     const { shiptunnelKey, shiptunnelMessage } = parseIncommingData(data);
 
