@@ -138,6 +138,7 @@ export class ShiptunnelServer {
 
   removeClient = (client: TSocket) => {
     if (!client.shiptunnelDomain) return;
+    client.end();
     this.clients[client.shiptunnelDomain] = (
       this.clients[client.shiptunnelDomain] || []
     ).filter((_client) => _client === client);
@@ -153,7 +154,7 @@ export class ShiptunnelServer {
       const fiveMinAgo = new Date();
       fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 5 * 1);
       if (client.lastPongAt && client.lastPongAt < fiveMinAgo) {
-        client.end();
+        this.removeClient(client);
       }
       if (!client.shouldSendPing) {
         return;
