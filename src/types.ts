@@ -2,19 +2,13 @@ import net from "net";
 
 export type TShiptunnelSocket = net.Socket & {
   shiptunnelDomain?: string;
-};
-
-export type TShiptunnelClientSocket = TShiptunnelSocket & {
-  client: {
+  client?: {
     shouldSendPing: boolean;
     lastPongAt: Date;
     incommingSocket?: TShiptunnelSocket;
   };
-};
-
-export type TShiptunnelIncommingSocket = TShiptunnelSocket & {
-  incomming: {
-    forwardedSocket?: TShiptunnelClientSocket;
+  incomming?: {
+    forwardedSocket?: TShiptunnelSocket;
   };
 };
 

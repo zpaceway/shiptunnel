@@ -5,19 +5,14 @@ import {
   parseIncommingData,
   SHIPTUNNEL_CLIENT_CONNECT_MESSAGE,
 } from "../communication";
-import {
-  TServerOptions,
-  TShiptunnelClientSocket,
-  TShiptunnelIncommingSocket,
-  TShiptunnelSocket,
-} from "../types";
+import { TServerOptions, TShiptunnelSocket } from "../types";
 import logger from "../logger";
 import { Subject } from "rxjs";
 
 export class ShiptunnelServer {
   private server: net.Server;
   private options: TServerOptions;
-  private clients: Record<string, TShiptunnelClientSocket[]> = {};
+  private clients: Record<string, TShiptunnelSocket[]> = {};
   private availableClient$: Subject<void> = new Subject();
 
   constructor({ options }: { options: TServerOptions }) {
@@ -39,9 +34,9 @@ export class ShiptunnelServer {
   ) => {
     const data = incommingData.toString();
 
-    if (data === "pong" && (socket as TShiptunnelClientSocket).client) {
-      (socket as TShiptunnelClientSocket).client.lastPongAt = new Date();
-      (socket as TShiptunnelClientSocket).client.shouldSendPing = true;
+    if (data === "pong" && socket.client) {
+      socket.client.lastPongAt = new Date();
+      socket.client.shouldSendPing = true;
       return;
     }
 
@@ -59,26 +54,24 @@ export class ShiptunnelServer {
       shiptunnelKey === this.options.skey &&
       shiptunnelMessage === SHIPTUNNEL_CLIENT_CONNECT_MESSAGE
     ) {
-      return this.addClient(socket as TShiptunnelClientSocket);
+      return this.addClient(socket);
     }
 
-    if ((socket as TShiptunnelClientSocket).client?.incommingSocket) {
+    if (socket.client?.incommingSocket) {
       logger.log(`Sending data to incomming socket`);
-      (socket as TShiptunnelClientSocket).client.incommingSocket?.write(
-        incommingData
-      );
+      socket.client.incommingSocket?.write(incommingData);
       logger.log("Data successfully sent to the incomming socket");
       return;
     }
 
     const clientSocket =
-      (socket as TShiptunnelIncommingSocket).incomming?.forwardedSocket ||
+      socket.incomming?.forwardedSocket ||
       (await this.findAvailableClient(socket.shiptunnelDomain));
 
     if (!clientSocket?.client) return socket.end();
 
     clientSocket.client.incommingSocket = socket;
-    (socket as TShiptunnelIncommingSocket).incomming = {
+    socket.incomming = {
       forwardedSocket: clientSocket,
     };
     logger.log("Sending data to socket forwarded socket");
@@ -96,14 +89,12 @@ export class ShiptunnelServer {
       return logger.log("Client disconnected");
     }
 
-    const incommingSocket = socket as TShiptunnelIncommingSocket;
-    if (incommingSocket.incomming?.forwardedSocket) {
+    if (socket.incomming?.forwardedSocket) {
       logger.log("Disconneting incomming socket from forwarded socket");
-      incommingSocket.incomming.forwardedSocket?.client.incommingSocket?.end();
-      if (incommingSocket.incomming.forwardedSocket?.client) {
-        incommingSocket.incomming.forwardedSocket.client.incommingSocket =
-          undefined;
-        incommingSocket.incomming.forwardedSocket = undefined;
+      socket.incomming.forwardedSocket.client?.incommingSocket?.end();
+      if (socket.incomming.forwardedSocket?.client) {
+        socket.incomming.forwardedSocket.client.incommingSocket = undefined;
+        socket.incomming.forwardedSocket = undefined;
       }
     }
   };
@@ -132,7 +123,7 @@ export class ShiptunnelServer {
     if (!clientSocket) {
       logger.log(`No available client for ${domain} was found`);
       this.askForNewClient(domain);
-      return new Promise<TShiptunnelClientSocket | undefined>((res) => {
+      return new Promise<TShiptunnelSocket | undefined>((res) => {
         const timeout = setTimeout(() => res(undefined), this.options.stimeout);
         this.availableClient$.subscribe({
           next: () => {
@@ -160,7 +151,7 @@ export class ShiptunnelServer {
     ).filter((_socket) => _socket === socket);
   };
 
-  addClient = (socket: TShiptunnelClientSocket) => {
+  addClient = (socket: TShiptunnelSocket) => {
     if (!socket.shiptunnelDomain)
       return logger.log("Can not add client because no domain was found");
     logger.log(`Adding new client to ${socket.shiptunnelDomain}`);
