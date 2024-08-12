@@ -24,18 +24,17 @@ export class ShiptunnelServer {
         socket.on("close", () => this.handleDisconnection(socket));
         socket.on("end", () => this.handleDisconnection(socket));
         socket.on("error", () => this.handleDisconnection(socket));
+        socket.on("pong", () => {
+          console.log("recevied pong");
+          socket.lastPongAt = new Date();
+          socket.shouldSendPing = true;
+        });
       }
     );
   }
 
   handleIncommingData = async (socket: TSocket, incommingData: Buffer) => {
     const data = incommingData.toString();
-
-    if (data === "pong") {
-      socket.lastPongAt = new Date();
-      socket.shouldSendPing = true;
-      return;
-    }
 
     const { domain, shiptunnelKey, shiptunnelMessage } =
       parseIncommingData(data);
@@ -159,7 +158,7 @@ export class ShiptunnelServer {
       if (!client.shouldSendPing) {
         return;
       }
-      client.write("ping");
+      client.emit("ping");
     }, 1000);
     this.clients[client.shiptunnelDomain] = [
       ...(this.clients[client.shiptunnelDomain] || []),
