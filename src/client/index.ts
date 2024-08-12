@@ -15,7 +15,7 @@ export class ShiptunnelClient {
 
   constructor({ manager }: { manager: ShiptunnelClientManager }) {
     this.manager = manager;
-    this.serverSocket = new net.Socket();
+    this.serverSocket = new net.Socket({ allowHalfOpen: true });
   }
 
   listen = () => {
@@ -55,7 +55,7 @@ export class ShiptunnelClient {
   };
 
   handleNewForwardedData = (incommingData: Buffer) => {
-    const forwardedSocket = new net.Socket();
+    const forwardedSocket = new net.Socket({ allowHalfOpen: true });
     this.forwardedSocket = forwardedSocket;
     this.manager.checkPoolStatus();
 

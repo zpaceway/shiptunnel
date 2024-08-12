@@ -7,23 +7,28 @@ import {
 } from "../communication";
 import { TServerOptions, TSocket } from "../types";
 import logger from "../logger";
+import { Subject } from "rxjs";
 
 export class ShiptunnelServer {
   private server: net.Server;
   private options: TServerOptions;
   private clients: Record<string, TSocket[]> = {};
+  private availableClient$: Subject<void> = new Subject();
 
   constructor({ options }: { options: TServerOptions }) {
     this.options = options;
-    this.server = net.createServer((socket: TSocket) => {
-      socket.on("data", (data) => this.handleIncommingData(socket, data));
-      socket.on("close", () => this.handleDisconnection(socket));
-      socket.on("end", () => this.handleDisconnection(socket));
-      socket.on("error", () => this.handleDisconnection(socket));
-    });
+    this.server = net.createServer(
+      { allowHalfOpen: true },
+      (socket: TSocket) => {
+        socket.on("data", (data) => this.handleIncommingData(socket, data));
+        socket.on("close", () => this.handleDisconnection(socket));
+        socket.on("end", () => this.handleDisconnection(socket));
+        socket.on("error", () => this.handleDisconnection(socket));
+      }
+    );
   }
 
-  handleIncommingData = (socket: TSocket, incommingData: Buffer) => {
+  handleIncommingData = async (socket: TSocket, incommingData: Buffer) => {
     const { domain, shiptunnelKey, shiptunnelMessage } =
       parseIncommingData(incommingData);
 
@@ -50,14 +55,16 @@ export class ShiptunnelServer {
 
     const forwardedSocket =
       socket.forwardedSocket ||
-      this.findAvailableClient(socket.shiptunnelDomain);
+      (await this.findAvailableClient(socket.shiptunnelDomain));
 
     if (!forwardedSocket) return socket.end();
 
     forwardedSocket.incommingSocket = socket;
     socket.forwardedSocket = forwardedSocket;
     logger.log("Sending data to socket forwarded socket");
+
     forwardedSocket.write(incommingData, (err) => {
+      if (!err) return;
       logger.log(`Failed to send data ${err}`);
     });
   };
@@ -90,7 +97,7 @@ export class ShiptunnelServer {
     );
   };
 
-  findAvailableClient = (domain: string) => {
+  findAvailableClient = async (domain: string) => {
     logger.log(
       `Trying to find available client to handle incomming request to ${domain}...`
     );
@@ -100,12 +107,23 @@ export class ShiptunnelServer {
 
     if (!client) {
       logger.log(`No available client for ${domain} was found`);
-      return this.askForNewClient(domain);
+      this.askForNewClient(domain);
+      return new Promise<TSocket | undefined>((res, rej) => {
+        const timeout = setTimeout(() => rej(undefined), this.options.stimeout);
+        this.availableClient$.subscribe({
+          next: () => {
+            const client = this.clients[domain]?.find(
+              (client) => !client.incommingSocket
+            );
+            if (!client) return;
+            clearTimeout(timeout);
+            res(client);
+          },
+        });
+      });
     }
 
     logger.log(`Available client for ${domain} found`);
-
-    logger.log(client);
 
     return client;
   };
