@@ -67,7 +67,9 @@ export class ShiptunnelClient {
       }
     );
 
-    forwardedSocket.on("data", this.serverSocket.write);
+    forwardedSocket.on("data", (incommingData) =>
+      this.serverSocket.write(incommingData)
+    );
     forwardedSocket.on("close", this.disconnectForwardedSocket);
     forwardedSocket.on("end", this.disconnectForwardedSocket);
     forwardedSocket.on("error", this.sendErrorResponse);

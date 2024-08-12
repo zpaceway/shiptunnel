@@ -84,10 +84,7 @@ export class ShiptunnelServer {
 
   handleDisconnection = (socket: TShiptunnelSocket) => {
     const clientSocket = this.findClient(socket);
-    if (clientSocket) {
-      this.removeClient(clientSocket);
-      return logger.log("Client disconnected");
-    }
+    if (clientSocket) return this.removeClient(clientSocket);
 
     if (socket.incomming?.forwardedSocket) {
       logger.log("Disconneting incomming socket from forwarded socket");
@@ -149,6 +146,11 @@ export class ShiptunnelServer {
     this.clients[socket.shiptunnelDomain] = (
       this.clients[socket.shiptunnelDomain] || []
     ).filter((_socket) => _socket === socket);
+    logger.log(
+      `Client removed, currently available clients ${
+        this.clients[socket.shiptunnelDomain]?.length || 0
+      }`
+    );
   };
 
   addClient = (socket: TShiptunnelSocket) => {
@@ -156,11 +158,12 @@ export class ShiptunnelServer {
       return logger.log("Can not add client because no domain was found");
     logger.log(`Adding new client to ${socket.shiptunnelDomain}`);
     socket.client = { shouldSendPing: true, lastPongAt: new Date() };
-    setInterval(() => {
+    const interval = setInterval(() => {
       const fiveMinAgo = new Date();
       fiveMinAgo.setTime(fiveMinAgo.getTime() - 1000 * 5 * 1);
       if (socket.client?.lastPongAt && socket.client.lastPongAt < fiveMinAgo) {
         this.removeClient(socket);
+        clearInterval(interval);
       }
       if (!socket.client?.shouldSendPing || socket.client?.incommingSocket) {
         return;
