@@ -2,7 +2,6 @@ import net from "net";
 import { ShiptunnelClientManager } from "./manager";
 import {
   generateClientConnectMessage,
-  generateHttp500responseMessage,
   parseIncommingData,
   SHIPTUNNEL_NEW_CLIENT_MESSAGE,
 } from "../communication";
@@ -30,11 +29,6 @@ export class ShiptunnelClient {
     this.serverSocket.on("close", () => this.disconnect("close"));
     this.serverSocket.on("error", () => this.disconnect("error"));
     this.serverSocket.on("timeout", () => this.disconnect("timeout"));
-  };
-
-  sendErrorResponse = () => {
-    this.serverSocket.write(generateHttp500responseMessage());
-    this.disconnectForwardedSocket("error");
   };
 
   handleServerSocketConnect = () => {
@@ -72,8 +66,10 @@ export class ShiptunnelClient {
     );
     forwardedSocket.on("close", () => this.disconnectForwardedSocket("close"));
     forwardedSocket.on("end", () => this.disconnectForwardedSocket("end"));
-    forwardedSocket.on("error", () => this.sendErrorResponse());
-    forwardedSocket.on("timeout", () => this.sendErrorResponse());
+    forwardedSocket.on("error", () => this.disconnectForwardedSocket("error"));
+    forwardedSocket.on("timeout", () =>
+      this.disconnectForwardedSocket("timeout")
+    );
   };
 
   disconnectForwardedSocket = (reason: string) => {

@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { OptionalString, TClientOptions, TServerOptions } from "./types";
 import { ShiptunnelServer } from "./server";
 import { ShiptunnelClientManager } from "./client/manager";
+import crypto from "crypto";
 import logger from "./logger";
 
 const program = new Command();
@@ -27,7 +28,9 @@ program
       fhost: options.fhost || "localhost",
       fport: parseInt(options.fport || "8080"),
       psize: parseInt(options.psize || "5"),
-      shost: options.shost || "localhost",
+      shost:
+        options.shost ||
+        `${crypto.randomUUID().split("-")[0]}.shiptunnel.zpaceway.com`,
       sport: parseInt(options.sport || "3333"),
       skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
     };

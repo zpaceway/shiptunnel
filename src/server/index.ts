@@ -1,6 +1,5 @@
 import net from "net";
 import {
-  generateHttp500responseMessage,
   generateNewClientMessage,
   parseIncommingData,
   SHIPTUNNEL_CLIENT_CONNECT_MESSAGE,
@@ -46,7 +45,6 @@ export class ShiptunnelServer {
     socket.shiptunnelDomain = socket.shiptunnelDomain || domain;
 
     if (!socket.shiptunnelDomain) {
-      socket.write(generateHttp500responseMessage());
       return socket.end();
     }
 
