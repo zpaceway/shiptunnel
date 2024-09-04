@@ -1,5 +1,8 @@
+import dotenv from "dotenv";
 import { createProxy } from "./proxy";
 import { createTunnel } from "./tunnel";
+
+dotenv.config();
 
 const FORWARDED_HOST = process.env["FORWARDED_HOST"] || "localhost";
 const FORWARDED_PORT = process.env["FORWARDED_PORT"] || "5500";
