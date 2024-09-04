@@ -5,18 +5,16 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "dist/src",
-    "dev": "ts-node src",
-    "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "ts-node-dev ./src",
+    "build": "rm -f -r ./dist && tsc"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.1.0",
-    "ts-node": "^10.9.2"
+    "@types/node": "^22.1.0"
   },
   "dependencies": {
-    "commander": "^12.1.0",
-    "rxjs": "^7.8.1"
+    "dotenv": "^16.4.5",
+    "ts-node-dev": "^2.0.0"
   }
 }

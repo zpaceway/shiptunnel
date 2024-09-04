@@ -1,65 +1,36 @@
-import { Command } from "commander";
-import { OptionalString, TClientOptions, TServerOptions } from "./types";
-import { ShiptunnelServer } from "./server";
-import { ShiptunnelClientManager } from "./client/manager";
-import crypto from "crypto";
-import logger from "./logger";
+import { createProxy } from "./proxy";
+import { createTunnel } from "./tunnel";
 
-const program = new Command();
+const FORWARDED_HOST = process.env["FORWARDED_HOST"] || "localhost";
+const FORWARDED_PORT = process.env["FORWARDED_PORT"] || "5500";
+const AVAILABILITY = process.env["AVAILABILITY"] || "5";
 
-program
-  .name("shiptunnel-cli-tool")
-  .description("Shiptunnel CLI tool")
-  .version("1.0.0");
+const PROXY_HOST = process.env["PROXY_HOST"] || "localhost";
+const PROXY_PORT = process.env["PROXY_PORT"] || "8001";
 
-program
-  .command("client")
-  .description(
-    "Run the client with the specified server and forwarding parameters"
-  )
-  .option("--skey <server-key>", "The server key")
-  .option("--shost <server-host>", "The server host")
-  .option("--sport <server-port>", "The server port")
-  .option("--fport <forwarded-port>", "The forwarded port")
-  .option("--fhost <forwarded-host>", "The forwarded host")
-  .option("--psize <pool-size>", "The connection pool size")
-  .action((options: OptionalString<TClientOptions>) => {
-    const managerOptions: TClientOptions = {
-      fhost: options.fhost || "localhost",
-      fport: parseInt(options.fport || "8080"),
-      psize: parseInt(options.psize || "5"),
-      shost:
-        options.shost ||
-        `${crypto.randomUUID().split("-")[0]}.shiptunnel.zpaceway.com`,
-      sport: parseInt(options.sport || "3333"),
-      skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
-    };
+const CLIENT_HOST = process.env["CLIENT_HOST"] || "localhost";
+const CLIENT_PORT = process.env["CLIENT_PORT"] || "8002";
 
-    logger.log("Running client with the following parameters:", managerOptions);
+const MODE = process.env["MODE"] || "all";
 
-    const manager = new ShiptunnelClientManager(managerOptions);
-    manager.run();
+if (["tunnel", "all"].includes(MODE)) {
+  const tunnel = createTunnel({
+    forwardedHost: FORWARDED_HOST,
+    forwardedPort: parseInt(FORWARDED_PORT),
+    proxyHost: PROXY_HOST,
+    proxyPort: parseInt(PROXY_PORT),
+    availability: parseInt(AVAILABILITY),
+  });
+  tunnel.listen();
+}
+
+if (["proxy", "all"].includes(MODE)) {
+  const proxy = createProxy({
+    proxyHost: PROXY_HOST,
+    proxyPort: parseInt(PROXY_PORT),
+    clientHost: CLIENT_HOST,
+    clientPort: parseInt(CLIENT_PORT),
   });
 
-program
-  .command("server")
-  .description(
-    "Run the client with the specified server and forwarding parameters"
-  )
-  .option("--skey <server-key>", "The server key")
-  .option("--sport <server-port>", "The server port")
-  .option("--stimeout <server-timeout>", "The server timeout")
-  .action((options: OptionalString<TServerOptions>) => {
-    const serverOptions: TServerOptions = {
-      skey: options.skey || "43942ad8e78e446b9422550c84431f2f",
-      sport: parseInt(options.sport || "3333"),
-      stimeout: parseInt(options.stimeout || "1000"),
-    };
-
-    logger.log("Running server with the following parameters:", serverOptions);
-
-    const server = new ShiptunnelServer({ options: serverOptions });
-    server.listen();
-  });
-
-program.parse(process.argv);
+  proxy.listen();
+}
