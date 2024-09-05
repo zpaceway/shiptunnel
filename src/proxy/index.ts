@@ -1,5 +1,4 @@
 import net from "net";
-import { logger } from "../monitoring";
 import onTunnelConnection from "./handlers/onTunnelConnection";
 import onClientConnection from "./handlers/onClientConnection";
 

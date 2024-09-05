@@ -6,18 +6,6 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
   tunnelSocket.once("data", (data) => {
     const subdomain = data.toString();
     if (!subdomain) return tunnelSocket.end();
-    logger.log(
-      `PROXY: New tunnel connected to handle requests from ${subdomain}`
-    );
-
-    tunnels[subdomain] = tunnels[subdomain] || [];
-    tunnels[subdomain].push(tunnelSocket);
-
-    logger.log(
-      `PROXY: Available tunnels for ${subdomain}: ${
-        tunnels[subdomain]?.length || 0
-      }`
-    );
 
     ["data", "end", "close", "timeout", "error"].forEach((event) => {
       tunnelSocket.on(event, () => {
@@ -46,6 +34,17 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
           );
       });
     });
+
+    logger.log(
+      `PROXY: New tunnel connected to handle requests from ${subdomain}`
+    );
+    tunnels[subdomain] = tunnels[subdomain] || [];
+    tunnels[subdomain].push(tunnelSocket);
+    logger.log(
+      `PROXY: Available tunnels for ${subdomain}: ${
+        tunnels[subdomain]?.length || 0
+      }`
+    );
   });
 };
 
