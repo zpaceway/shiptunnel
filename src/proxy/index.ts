@@ -15,9 +15,11 @@ export const createProxy = ({
 }) => {
   const tunnelServer = net.createServer({
     keepAlive: true,
+    allowHalfOpen: true,
   });
   const clientServer = net.createServer({
     keepAlive: true,
+    allowHalfOpen: true,
   });
 
   tunnelServer.on("connection", onTunnelConnection);
