@@ -8,7 +8,7 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
     if (!subdomain) return tunnelSocket.end();
 
     const connectionTimeout = setTimeout(() => {
-      tunnelSocket.end();
+      // tunnelSocket.end();
     }, 20000);
 
     ["data", "end", "close", "timeout", "error"].forEach((event) => {
