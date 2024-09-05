@@ -4,7 +4,6 @@ import { UNAVAILABLE_EVENTS } from "../constants";
 import { CallbackQueue } from "../transmission";
 
 const listenerQueue = new CallbackQueue({ delay: 100 });
-const timeoutQueue = new CallbackQueue({ delay: 1000 });
 
 export const createTunnel = ({
   forwardedHost,
@@ -47,14 +46,11 @@ export const createTunnel = ({
     proxyConnection.pipe(forwardedConnection, { end: true });
 
     let willTimeout = true;
-
     setTimeout(() => {
-      timeoutQueue.push(() => {
-        if (willTimeout) {
-          forwardedConnection.end();
-          proxyConnection.end();
-        }
-      });
+      if (willTimeout) {
+        forwardedConnection.end();
+        proxyConnection.end();
+      }
     }, 10000);
 
     UNAVAILABLE_EVENTS.forEach((event) => {

@@ -2,9 +2,6 @@ import net from "net";
 import { logger } from "../../monitoring";
 import { tunnels } from "./structures";
 import { UNAVAILABLE_EVENTS } from "../../constants";
-import { CallbackQueue } from "../../transmission";
-
-const timeoutQueue = new CallbackQueue({ delay: 1000 });
 
 const onTunnelConnection = (tunnelSocket: net.Socket) => {
   tunnelSocket.once("data", (data) => {
@@ -13,11 +10,9 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
 
     let willTimeout = false;
     setTimeout(() => {
-      timeoutQueue.push(() => {
-        if (willTimeout) {
-          tunnelSocket.end();
-        }
-      });
+      if (willTimeout) {
+        tunnelSocket.end();
+      }
     }, 10000);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
