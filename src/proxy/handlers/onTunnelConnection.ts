@@ -11,38 +11,36 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
       tunnelSocket.end();
     }, 20000);
 
-    ["data", "end", "close", "timeout", "error", "unavailable"].forEach(
-      (event) => {
-        tunnelSocket.on(event, () => {
-          clearTimeout(connectionTimeout);
-          const initialSize = tunnels[subdomain]?.length || 0;
-          tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
-            if (socket === tunnelSocket) {
-              if (event !== "data") {
-                tunnelSocket.end();
-              }
-              logger.log(
-                `PROXY: Tunnel removed because of event ${event}: ${
-                  tunnels[subdomain]?.length || 0
-                }`
-              );
-              return false;
+    UNAVAILABLE_EVENTS.forEach((event) => {
+      tunnelSocket.on(event, () => {
+        clearTimeout(connectionTimeout);
+        const initialSize = tunnels[subdomain]?.length || 0;
+        tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
+          if (socket === tunnelSocket) {
+            if (event !== "data") {
+              tunnelSocket.end();
             }
-
-            return true;
-          });
-
-          const newSize = tunnels[subdomain]?.length || 0;
-
-          if (newSize !== initialSize)
             logger.log(
-              `PROXY: Available tunnels for ${subdomain}: ${
+              `PROXY: Tunnel removed because of event ${event}: ${
                 tunnels[subdomain]?.length || 0
               }`
             );
+            return false;
+          }
+
+          return true;
         });
-      }
-    );
+
+        const newSize = tunnels[subdomain]?.length || 0;
+
+        if (newSize !== initialSize)
+          logger.log(
+            `PROXY: Available tunnels for ${subdomain}: ${
+              tunnels[subdomain]?.length || 0
+            }`
+          );
+      });
+    });
 
     logger.log(
       `PROXY: New tunnel connected to handle requests from ${subdomain}`

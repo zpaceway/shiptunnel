@@ -42,7 +42,7 @@ export const createTunnel = ({
       proxyConnection.end();
     }, 20000);
 
-    ["data", "end", "close", "timeout", "error"].forEach((event) => {
+    UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.on(event, () => {
           clearTimeout(connectionTimeout);
