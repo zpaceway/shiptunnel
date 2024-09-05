@@ -1,6 +1,10 @@
 import net from "net";
 import { logger } from "../monitoring";
 import { UNAVAILABLE_EVENTS } from "../constants";
+import { CallbackQueue } from "../transmission";
+
+const listenerQueue = new CallbackQueue({ delay: 100 });
+const timeoutQueue = new CallbackQueue({ delay: 100 });
 
 export const createTunnel = ({
   forwardedHost,
@@ -15,9 +19,13 @@ export const createTunnel = ({
   proxyPort: number;
   availability: number;
 }) => {
-  let availableTunnels: Symbol[] = [];
+  let availableTunnels: symbol[] = [];
 
   const _listen = () => {
+    if (availableTunnels.length >= availability) {
+      return;
+    }
+
     logger.log(
       `TUNNEL: Starting tunnel to connect proxy ${proxyHost}:${proxyPort} and forwarded: ${forwardedHost}:${forwardedPort}`
     );
@@ -38,30 +46,44 @@ export const createTunnel = ({
     forwardedConnection.pipe(proxyConnection, { end: true });
     proxyConnection.pipe(forwardedConnection, { end: true });
 
-    const connectionTimeout = setTimeout(() => {
-      forwardedConnection.end();
-      proxyConnection.end();
+    let willTimeout = true;
+
+    setTimeout(() => {
+      timeoutQueue.push(() => {
+        if (willTimeout) {
+          forwardedConnection.end();
+          proxyConnection.end();
+        }
+      });
     }, 20000);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.on(event, () => {
-          clearTimeout(connectionTimeout);
+          willTimeout = false;
           if (event !== "data") {
             forwardedConnection.end();
             proxyConnection.end();
           }
+          const initialSize = availableTunnels.length;
           availableTunnels = availableTunnels.filter((symbol) => {
-            return symbol !== tunnelSymbol;
+            if (symbol === tunnelSymbol) {
+              if (availableTunnels.length < availability) {
+                logger.log(
+                  `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
+                );
+
+                listenerQueue.push(_listen);
+              }
+              return false;
+            }
+            return true;
           });
-          if (availableTunnels.length < availability) {
-            logger.log(
-              `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
-            );
+          const finalSize = availableTunnels.length;
+          if (initialSize < finalSize) {
             logger.log(
               `TUNNEL: New available tunnels: ${availableTunnels.length}`
             );
-            _listen();
           }
         });
       });
@@ -71,12 +93,16 @@ export const createTunnel = ({
 
     availableTunnels.push(tunnelSymbol);
     logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
+
+    if (availableTunnels.length < availability) {
+      listenerQueue.push(_listen);
+    }
   };
 
   return {
     listen: () => {
       for (let i = 0; i < availability; i++) {
-        _listen();
+        listenerQueue.push(_listen);
       }
     },
   };
