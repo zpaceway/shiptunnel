@@ -4,7 +4,7 @@ import { tunnels } from "./structures";
 import { UNAVAILABLE_EVENTS } from "../../constants";
 import { CallbackQueue } from "../../transmission";
 
-const timeoutQueue = new CallbackQueue({ delay: 100 });
+const timeoutQueue = new CallbackQueue({ delay: 1000 });
 
 const onTunnelConnection = (tunnelSocket: net.Socket) => {
   tunnelSocket.once("data", (data) => {
@@ -18,7 +18,7 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
           tunnelSocket.end();
         }
       });
-    }, 20000);
+    }, 10000);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       tunnelSocket.on(event, () => {

@@ -4,7 +4,7 @@ import { UNAVAILABLE_EVENTS } from "../constants";
 import { CallbackQueue } from "../transmission";
 
 const listenerQueue = new CallbackQueue({ delay: 100 });
-const timeoutQueue = new CallbackQueue({ delay: 100 });
+const timeoutQueue = new CallbackQueue({ delay: 1000 });
 
 export const createTunnel = ({
   forwardedHost,
@@ -55,7 +55,7 @@ export const createTunnel = ({
           proxyConnection.end();
         }
       });
-    }, 20000);
+    }, 10000);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
