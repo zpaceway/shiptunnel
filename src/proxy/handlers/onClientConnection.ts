@@ -22,8 +22,6 @@ const onClientConnection = (clientSocket: net.Socket) => {
 
     if (!tunnels[host] || !tunnelSocket) return clientSocket.end();
 
-    tunnels[host] = tunnels[host].slice(1);
-
     logger.log(
       `PROXY: Tunnel available found for client, proxying connections to now tunnel`
     );
@@ -31,6 +29,7 @@ const onClientConnection = (clientSocket: net.Socket) => {
       `PROXY: Left available tunnels for ${host}: ${tunnels[host]?.length || 0}`
     );
 
+    tunnelSocket.emit("unavailable");
     tunnelSocket.write(data);
     tunnelSocket.pipe(clientSocket, { end: true });
     clientSocket.pipe(tunnelSocket, { end: true });

@@ -8,37 +8,39 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
     if (!subdomain) return tunnelSocket.end();
 
     const connectionTimeout = setTimeout(() => {
-      // tunnelSocket.end();
+      tunnelSocket.end();
     }, 20000);
 
-    ["data", "end", "close", "timeout", "error"].forEach((event) => {
-      tunnelSocket.on(event, () => {
-        clearTimeout(connectionTimeout);
-        const initialSize = tunnels[subdomain]?.length || 0;
-        tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
-          if (socket === tunnelSocket) {
+    ["data", "end", "close", "timeout", "error", "unavailable"].forEach(
+      (event) => {
+        tunnelSocket.on(event, () => {
+          clearTimeout(connectionTimeout);
+          const initialSize = tunnels[subdomain]?.length || 0;
+          tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
+            if (socket === tunnelSocket) {
+              logger.log(
+                `PROXY: Tunnel removed because of event ${event}: ${
+                  tunnels[subdomain]?.length || 0
+                }`
+              );
+              tunnelSocket.end();
+              return false;
+            }
+
+            return true;
+          });
+
+          const newSize = tunnels[subdomain]?.length || 0;
+
+          if (newSize !== initialSize)
             logger.log(
-              `PROXY: Tunnel removed because of event ${event}: ${
+              `PROXY: Available tunnels for ${subdomain}: ${
                 tunnels[subdomain]?.length || 0
               }`
             );
-            tunnelSocket.end();
-            return false;
-          }
-
-          return true;
         });
-
-        const newSize = tunnels[subdomain]?.length || 0;
-
-        if (newSize !== initialSize)
-          logger.log(
-            `PROXY: Available tunnels for ${subdomain}: ${
-              tunnels[subdomain]?.length || 0
-            }`
-          );
-      });
-    });
+      }
+    );
 
     logger.log(
       `PROXY: New tunnel connected to handle requests from ${subdomain}`
