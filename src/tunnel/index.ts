@@ -16,7 +16,7 @@ export const createTunnel = ({
 }) => {
   let availableTunnels: Symbol[] = [];
 
-  const listen = () => {
+  const _listen = () => {
     logger.log(
       `TUNNEL: Starting tunnel to connect proxy ${proxyHost}:${proxyPort} and forwarded: ${forwardedHost}:${forwardedPort}`
     );
@@ -38,11 +38,11 @@ export const createTunnel = ({
     ["data", "end", "timeout", "error"].forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.on(event, () => {
+          if (event !== "data") {
+            forwardedConnection.end();
+            proxyConnection.end();
+          }
           availableTunnels = availableTunnels.filter((symbol) => {
-            if (event !== "data") {
-              forwardedConnection.end();
-              proxyConnection.end();
-            }
             return symbol !== tunnelSymbol;
           });
           if (availableTunnels.length < availability) {
@@ -52,7 +52,7 @@ export const createTunnel = ({
             logger.log(
               `TUNNEL: New available tunnels: ${availableTunnels.length}`
             );
-            listen();
+            _listen();
           }
         });
       });
@@ -64,5 +64,11 @@ export const createTunnel = ({
     logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
   };
 
-  return { listen };
+  return {
+    listen: () => {
+      for (let i = 0; i < availability; i++) {
+        _listen();
+      }
+    },
+  };
 };
