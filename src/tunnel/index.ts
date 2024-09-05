@@ -35,7 +35,7 @@ export const createTunnel = ({
     forwardedConnection.pipe(proxyConnection, { end: true });
     proxyConnection.pipe(forwardedConnection, { end: true });
 
-    ["data", "end", "timeout", "error"].forEach((event) => {
+    ["data", "end", "close", "timeout", "error"].forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.on(event, () => {
           if (event !== "data") {

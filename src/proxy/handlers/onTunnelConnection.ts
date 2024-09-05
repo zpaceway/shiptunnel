@@ -19,7 +19,7 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
       }`
     );
 
-    ["data", "end", "timeout", "error"].forEach((event) => {
+    ["data", "end", "close", "timeout", "error"].forEach((event) => {
       tunnelSocket.on(event, () => {
         const initialSize = tunnels[subdomain]?.length || 0;
         tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
