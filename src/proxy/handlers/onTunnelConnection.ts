@@ -21,11 +21,6 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
             if (event !== "data") {
               tunnelSocket.end();
             }
-            logger.log(
-              `PROXY: Tunnel removed because of event ${event}: ${
-                tunnels[subdomain]?.length || 0
-              }`
-            );
             return false;
           }
 
@@ -34,12 +29,18 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
 
         const newSize = tunnels[subdomain]?.length || 0;
 
-        if (newSize !== initialSize)
+        if (newSize !== initialSize) {
+          logger.log(
+            `PROXY: Tunnel removed because of event ${event}: ${
+              tunnels[subdomain]?.length || 0
+            }`
+          );
           logger.log(
             `PROXY: Available tunnels for ${subdomain}: ${
               tunnels[subdomain]?.length || 0
             }`
           );
+        }
       });
     });
 

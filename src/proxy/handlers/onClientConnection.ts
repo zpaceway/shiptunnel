@@ -29,7 +29,7 @@ const onClientConnection = (clientSocket: net.Socket) => {
       `PROXY: Left available tunnels for ${host}: ${tunnels[host]?.length || 0}`
     );
 
-    tunnelSocket.emit("unavailable");
+    tunnelSocket.emit("data");
     tunnelSocket.write(data);
     tunnelSocket.pipe(clientSocket, { end: true });
     clientSocket.pipe(tunnelSocket, { end: true });
