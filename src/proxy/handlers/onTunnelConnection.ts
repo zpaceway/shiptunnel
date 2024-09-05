@@ -7,8 +7,13 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
     const subdomain = data.toString();
     if (!subdomain) return tunnelSocket.end();
 
+    const connectionTimeout = setTimeout(() => {
+      tunnelSocket.end();
+    }, 20000);
+
     ["data", "end", "close", "timeout", "error"].forEach((event) => {
       tunnelSocket.on(event, () => {
+        clearTimeout(connectionTimeout);
         const initialSize = tunnels[subdomain]?.length || 0;
         tunnels[subdomain] = tunnels[subdomain]?.filter((socket) => {
           if (socket === tunnelSocket) {

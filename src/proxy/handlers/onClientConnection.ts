@@ -18,9 +18,11 @@ const onClientConnection = (clientSocket: net.Socket) => {
       `PROXY: New client connected to proxy trying to access ${host} via a tunnel`
     );
 
-    const tunnelSocket = tunnels[host]?.pop();
+    const tunnelSocket = tunnels[host]?.[0];
 
     if (!tunnelSocket) return clientSocket.end();
+
+    tunnels[host] = tunnels[host]?.slice(1);
 
     logger.log(
       `PROXY: Tunnel available found for client, proxying connections to now tunnel`

@@ -22,7 +22,6 @@ export const createTunnel = ({
     );
     const tunnelSymbol = Symbol();
     const forwardedConnection = net.createConnection({
-      keepAlive: true,
       host: forwardedHost,
       port: forwardedPort,
     });
@@ -35,9 +34,15 @@ export const createTunnel = ({
     forwardedConnection.pipe(proxyConnection, { end: true });
     proxyConnection.pipe(forwardedConnection, { end: true });
 
+    const connectionTimeout = setTimeout(() => {
+      forwardedConnection.end();
+      proxyConnection.end();
+    }, 20000);
+
     ["data", "end", "close", "timeout", "error"].forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.on(event, () => {
+          clearTimeout(connectionTimeout);
           if (event !== "data") {
             forwardedConnection.end();
             proxyConnection.end();
