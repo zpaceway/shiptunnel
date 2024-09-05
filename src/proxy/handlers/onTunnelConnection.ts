@@ -1,6 +1,7 @@
 import net from "net";
 import { logger } from "../../monitoring";
 import { tunnels } from "./structures";
+import { UNAVAILABLE_EVENTS } from "../../constants";
 
 const onTunnelConnection = (tunnelSocket: net.Socket) => {
   tunnelSocket.once("data", (data) => {

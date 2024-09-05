@@ -1,4 +1,4 @@
-const UNAVAILABLE_EVENTS = [
+export const UNAVAILABLE_EVENTS = [
   "data",
   "end",
   "close",

@@ -1,5 +1,6 @@
 import net from "net";
 import { logger } from "../monitoring";
+import { UNAVAILABLE_EVENTS } from "../constants";
 
 export const createTunnel = ({
   forwardedHost,
