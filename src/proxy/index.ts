@@ -1,18 +1,21 @@
 import net from "net";
 import onTunnelConnection from "./handlers/onTunnelConnection";
 import onClientConnection from "./handlers/onClientConnection";
+import { CreateProxyOptions } from "./types";
+import { tunnelsManager } from "./handlers/structures";
 
 export const createProxy = ({
   proxyHost,
   proxyPort,
   clientPort,
   clientHost,
-}: {
-  proxyHost: string;
-  proxyPort: number;
-  clientHost: string;
-  clientPort: number;
-}) => {
+  unavailableTimeoutInMilliseconds,
+  connectionTimeoutInMilliseconds,
+}: CreateProxyOptions) => {
+  tunnelsManager.setConnectionTimeoutInMilliseconds(
+    connectionTimeoutInMilliseconds
+  );
+
   const tunnelServer = net.createServer({
     keepAlive: true,
     allowHalfOpen: true,
@@ -22,7 +25,9 @@ export const createProxy = ({
     allowHalfOpen: true,
   });
 
-  tunnelServer.on("connection", onTunnelConnection);
+  tunnelServer.on("connection", (tunnelSocket) =>
+    onTunnelConnection(tunnelSocket, unavailableTimeoutInMilliseconds)
+  );
   clientServer.on("connection", onClientConnection);
 
   const listen = () => {

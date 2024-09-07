@@ -14,6 +14,11 @@ const PROXY_PORT = process.env["PROXY_PORT"] || "8001";
 const CLIENT_HOST = process.env["CLIENT_HOST"] || "localhost";
 const CLIENT_PORT = process.env["CLIENT_PORT"] || "8002";
 
+const UNAVAILABLE_TIMEOUT_IN_MILLISECONDS =
+  process.env["UNAVAILABLE_TIMEOUT_IN_MILLISECONDS"] || "10000";
+const CONNECTION_TIMEOUT_IN_MILLISECONDS =
+  process.env["CONNECTION_TIMEOUT_IN_MILLISECONDS"] || "2000";
+
 const MODE = process.env["MODE"] || "all";
 
 if (["tunnel", "all"].includes(MODE)) {
@@ -22,6 +27,9 @@ if (["tunnel", "all"].includes(MODE)) {
     forwardedPort: parseInt(FORWARDED_PORT),
     proxyHost: PROXY_HOST,
     proxyPort: parseInt(PROXY_PORT),
+    unavailableTimeoutInMilliseconds: parseInt(
+      UNAVAILABLE_TIMEOUT_IN_MILLISECONDS
+    ),
     availability: parseInt(AVAILABILITY),
   });
   tunnel.listen();
@@ -33,6 +41,12 @@ if (["proxy", "all"].includes(MODE)) {
     proxyPort: parseInt(PROXY_PORT),
     clientHost: CLIENT_HOST,
     clientPort: parseInt(CLIENT_PORT),
+    unavailableTimeoutInMilliseconds: parseInt(
+      UNAVAILABLE_TIMEOUT_IN_MILLISECONDS
+    ),
+    connectionTimeoutInMilliseconds: parseInt(
+      CONNECTION_TIMEOUT_IN_MILLISECONDS
+    ),
   });
 
   proxy.listen();

@@ -3,5 +3,6 @@ export type CreateTunnelOptions = {
   forwardedPort: number;
   proxyHost: string;
   proxyPort: number;
+  unavailableTimeoutInMilliseconds: number;
   availability: number;
 };

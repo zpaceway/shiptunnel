@@ -2,10 +2,15 @@ import net from "net";
 import { logger } from "../../monitoring";
 
 class TunnelsManager {
+  connectionTimeoutInMilliseconds?: number;
   tunnels: Record<string, net.Socket[] | undefined>;
 
   constructor() {
     this.tunnels = {};
+  }
+
+  setConnectionTimeoutInMilliseconds(value: number) {
+    this.connectionTimeoutInMilliseconds = value;
   }
 
   async pop(host: string) {
@@ -17,7 +22,7 @@ class TunnelsManager {
       const timeout = setTimeout(() => {
         clearInterval(interval);
         res(undefined);
-      }, parseInt(process.env["CONNECTION_TIMEOUT_IN_MILLISECONDS"]!));
+      }, this.connectionTimeoutInMilliseconds);
 
       const interval = setInterval(() => {
         const tunnel = this.tunnels[host]?.[0];

@@ -12,6 +12,7 @@ export const createTunnel = ({
   proxyPort,
   proxyHost,
   availability,
+  unavailableTimeoutInMilliseconds,
 }: CreateTunnelOptions) => {
   let availableTunnels: symbol[] = [];
 
@@ -44,7 +45,7 @@ export const createTunnel = ({
         forwardedConnection.end();
         proxyConnection.end();
       }
-    }, parseInt(process.env["UNAVAILABLE_TIMEOUT_IN_MILLISECONDS"]!));
+    }, unavailableTimeoutInMilliseconds);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
