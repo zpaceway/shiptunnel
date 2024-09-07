@@ -20,7 +20,7 @@ const onTunnelConnection = (tunnelSocket: net.Socket) => {
         if (event !== "data") {
           tunnelSocket.end();
         }
-        tunnelsManager.remove(host, tunnelSocket);
+        tunnelsManager.remove(host, tunnelSocket, event);
       });
     });
 

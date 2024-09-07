@@ -54,7 +54,7 @@ class TunnelsManager {
     );
   }
 
-  remove(host: string, tunnel: net.Socket) {
+  remove(host: string, tunnel: net.Socket, event: string) {
     const initialSize = this.tunnels[host]?.length || 0;
     this.tunnels[host] = this.tunnels[host]?.filter((socket) => {
       if (socket === tunnel) {
