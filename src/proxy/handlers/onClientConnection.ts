@@ -1,9 +1,9 @@
 import net from "net";
 import { logger } from "../../monitoring";
-import { tunnels } from "./structures";
+import { tunnelsManager } from "./structures";
 
 const onClientConnection = (clientSocket: net.Socket) => {
-  clientSocket.once("data", (data) => {
+  clientSocket.once("data", async (data) => {
     clientSocket.pause();
     const host = data
       .toString()
@@ -18,21 +18,14 @@ const onClientConnection = (clientSocket: net.Socket) => {
       `PROXY: New client connected to proxy trying to access ${host} via a tunnel`
     );
 
-    const tunnelSocket = tunnels[host]?.[0];
+    const tunnelSocket = await tunnelsManager.pop(host);
 
-    if (!tunnels[host] || !tunnelSocket) return clientSocket.end();
-
-    logger.log(
-      `PROXY: Tunnel available found for client, proxying connections to now tunnel`
-    );
-    logger.log(
-      `PROXY: Left available tunnels for ${host}: ${tunnels[host]?.length || 0}`
-    );
+    if (!tunnelSocket) return clientSocket.end();
 
     tunnelSocket.emit("data");
     tunnelSocket.write(data);
-    tunnelSocket.pipe(clientSocket, { end: true });
     clientSocket.pipe(tunnelSocket, { end: true });
+    tunnelSocket.pipe(clientSocket, { end: true });
 
     clientSocket.resume();
   });

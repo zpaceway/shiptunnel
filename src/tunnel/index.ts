@@ -2,6 +2,7 @@ import net from "net";
 import { logger } from "../monitoring";
 import { UNAVAILABLE_EVENTS } from "../constants";
 import { CallbackQueue } from "../transmission";
+import { CreateTunnelOptions } from "./types";
 
 const listenerQueue = new CallbackQueue({ delay: 100 });
 
@@ -11,13 +12,7 @@ export const createTunnel = ({
   proxyPort,
   proxyHost,
   availability,
-}: {
-  forwardedHost: string;
-  forwardedPort: number;
-  proxyHost: string;
-  proxyPort: number;
-  availability: number;
-}) => {
+}: CreateTunnelOptions) => {
   let availableTunnels: symbol[] = [];
 
   const _listen = () => {
@@ -31,13 +26,11 @@ export const createTunnel = ({
     const tunnelSymbol = Symbol();
     const forwardedConnection = net.createConnection({
       keepAlive: true,
-      allowHalfOpen: true,
       host: forwardedHost,
       port: forwardedPort,
     });
     const proxyConnection = net.createConnection({
       keepAlive: true,
-      allowHalfOpen: true,
       host: proxyHost,
       port: proxyPort,
     });
@@ -51,7 +44,7 @@ export const createTunnel = ({
         forwardedConnection.end();
         proxyConnection.end();
       }
-    }, 10000);
+    }, parseInt(process.env["UNAVAILABLE_TIMEOUT_IN_MILLISECONDS"]!));
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {

@@ -1,9 +1,11 @@
+import { CallbackQueueOptions } from "./types";
+
 export class CallbackQueue {
   callbacks: (() => Promise<void> | void)[];
   running: boolean;
   delay: number;
 
-  constructor({ delay }: { delay: number }) {
+  constructor({ delay }: CallbackQueueOptions) {
     this.callbacks = [];
     this.running = false;
     this.delay = delay;
