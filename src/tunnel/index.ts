@@ -1,10 +1,7 @@
 import net from "net";
 import { logger } from "../monitoring";
 import { UNAVAILABLE_EVENTS } from "../constants";
-import { CallbackQueue } from "../transmission";
 import { CreateTunnelOptions } from "./types";
-
-const listenerQueue = new CallbackQueue({ delay: 100 });
 
 export const createTunnel = ({
   forwardedHost,
@@ -56,25 +53,19 @@ export const createTunnel = ({
             proxyConnection.end();
           }
           const initialSize = availableTunnels.length;
-          availableTunnels = availableTunnels.filter((symbol) => {
-            if (symbol === tunnelSymbol) {
-              if (availableTunnels.length < availability) {
-                logger.log(
-                  `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
-                );
-
-                listenerQueue.push(_listen);
-              }
-              return false;
-            }
-            return true;
-          });
+          availableTunnels = availableTunnels.filter(
+            (symbol) => symbol !== tunnelSymbol
+          );
           const finalSize = availableTunnels.length;
           if (initialSize < finalSize) {
+            logger.log(
+              `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
+            );
             logger.log(
               `TUNNEL: New available tunnels: ${availableTunnels.length}`
             );
           }
+          _listen();
         });
       });
     });
@@ -84,15 +75,13 @@ export const createTunnel = ({
     availableTunnels.push(tunnelSymbol);
     logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
 
-    if (availableTunnels.length < availability) {
-      listenerQueue.push(_listen);
-    }
+    _listen();
   };
 
   return {
     listen: () => {
       for (let i = 0; i < availability; i++) {
-        listenerQueue.push(_listen);
+        _listen();
       }
     },
   };

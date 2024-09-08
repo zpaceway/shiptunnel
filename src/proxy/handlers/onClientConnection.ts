@@ -3,7 +3,7 @@ import { logger } from "../../monitoring";
 import { tunnelsManager } from "./structures";
 
 const onClientConnection = (clientSocket: net.Socket) => {
-  clientSocket.once("data", async (data) => {
+  clientSocket.once("data", (data) => {
     clientSocket.pause();
     const host = data
       .toString()
@@ -18,16 +18,15 @@ const onClientConnection = (clientSocket: net.Socket) => {
       `PROXY: New client connected to proxy trying to access ${host} via a tunnel`
     );
 
-    const tunnelSocket = await tunnelsManager.pop(host);
+    tunnelsManager.pop(host).then((tunnelSocket) => {
+      if (!tunnelSocket) return clientSocket.end();
 
-    if (!tunnelSocket) return clientSocket.end();
+      tunnelSocket.write(data);
+      clientSocket.pipe(tunnelSocket, { end: true });
+      tunnelSocket.pipe(clientSocket, { end: true });
 
-    tunnelSocket.emit("data");
-    tunnelSocket.write(data);
-    clientSocket.pipe(tunnelSocket, { end: true });
-    tunnelSocket.pipe(clientSocket, { end: true });
-
-    clientSocket.resume();
+      clientSocket.resume();
+    });
   });
 };
 

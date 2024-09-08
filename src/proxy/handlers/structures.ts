@@ -27,11 +27,12 @@ class TunnelsManager {
       const interval = setInterval(() => {
         const tunnel = this.tunnels[host]?.[0];
         if (tunnel) {
+          tunnel.emit("unavailable");
           clearTimeout(timeout);
           clearInterval(interval);
           res(tunnel);
         }
-      }, 100);
+      }, 50);
     });
 
     if (!tunnel) {
@@ -59,12 +60,12 @@ class TunnelsManager {
     );
   }
 
-  remove(host: string, tunnel: net.Socket, event: string) {
+  remove(host: string, tunnel: net.Socket, reason: string) {
     const initialSize = this.tunnels[host]?.length || 0;
     this.tunnels[host] = this.tunnels[host]?.filter((socket) => {
       if (socket === tunnel) {
         logger.log(
-          `PROXY: Tunnel removed because of event ${event}: ${
+          `PROXY: Tunnel removed because of reason: ${reason}: ${
             this.tunnels[host]?.length || 0
           }`
         );
