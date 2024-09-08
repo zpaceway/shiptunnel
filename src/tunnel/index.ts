@@ -57,7 +57,7 @@ export const createTunnel = ({
             (symbol) => symbol !== tunnelSymbol
           );
           const finalSize = availableTunnels.length;
-          if (initialSize < finalSize) {
+          if (initialSize > finalSize) {
             logger.log(
               `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
             );
