@@ -1,8 +1,10 @@
 export const logger = {
   log(...args: unknown[]) {
-    console.log.apply(this, [new Date(), ...args]);
+    if (["LOG"].includes(process.env["LOG_LEVEL"] || "ERROR"))
+      console.log.apply(this, [new Date(), ...args]);
   },
   error(...args: unknown[]) {
-    console.error.apply(this, [...args]);
+    if (["LOG", "ERROR"].includes(process.env["LOG_LEVEL"] || "ERROR"))
+      console.error.apply(this, [new Date(), ...args]);
   },
 };

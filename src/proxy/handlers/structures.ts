@@ -27,7 +27,7 @@ class TunnelsManager {
       const interval = setInterval(() => {
         const tunnel = this.tunnels[host]?.[0];
         if (tunnel) {
-          tunnel.emit("unavailable");
+          tunnel.emit("data");
           clearTimeout(timeout);
           clearInterval(interval);
           res(tunnel);
