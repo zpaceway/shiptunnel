@@ -1,6 +1,7 @@
 import net from "net";
 import { logger } from "../../monitoring";
 import { tunnelsManager } from "./structures";
+import { bindSokets } from "../../communication";
 
 const onClientConnection = (clientSocket: net.Socket) => {
   clientSocket.once("data", (data) => {
@@ -22,9 +23,7 @@ const onClientConnection = (clientSocket: net.Socket) => {
       if (!tunnelSocket) return clientSocket.end();
 
       tunnelSocket.write(data);
-      clientSocket.pipe(tunnelSocket, { end: true });
-      tunnelSocket.pipe(clientSocket, { end: true });
-
+      bindSokets(clientSocket, tunnelSocket);
       clientSocket.resume();
     });
   });

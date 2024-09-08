@@ -2,6 +2,7 @@ import net from "net";
 import { logger } from "../monitoring";
 import { UNAVAILABLE_EVENTS } from "../constants";
 import { CreateTunnelOptions } from "./types";
+import { bindSokets } from "../communication";
 
 export const createTunnel = ({
   forwardedHost,
@@ -33,8 +34,7 @@ export const createTunnel = ({
       port: proxyPort,
     });
 
-    forwardedConnection.pipe(proxyConnection, { end: true });
-    proxyConnection.pipe(forwardedConnection, { end: true });
+    bindSokets(forwardedConnection, proxyConnection);
 
     let willTimeout = true;
     setTimeout(() => {
