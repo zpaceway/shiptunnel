@@ -1,3 +1,5 @@
+import net from "net";
+
 export type CreateProxyOptions = {
   proxyHost: string;
   proxyPort: number;
@@ -5,4 +7,8 @@ export type CreateProxyOptions = {
   clientPort: number;
   unavailableTimeoutInMilliseconds: number;
   connectionTimeoutInMilliseconds: number;
+};
+
+export type TunnelSocket = net.Socket & {
+  unavailable?: (reason: string) => void;
 };

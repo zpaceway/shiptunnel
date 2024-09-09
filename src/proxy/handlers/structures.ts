@@ -1,9 +1,10 @@
 import net from "net";
 import { logger } from "../../monitoring";
+import { TunnelSocket } from "../types";
 
 class TunnelsManager {
   connectionTimeoutInMilliseconds?: number;
-  tunnels: Record<string, net.Socket[] | undefined>;
+  tunnels: Record<string, TunnelSocket[] | undefined>;
 
   constructor() {
     this.tunnels = {};
@@ -18,7 +19,7 @@ class TunnelsManager {
       `PROXY: Trying to find a tunnel to handle requests from ${host}`
     );
 
-    const tunnel = await new Promise<net.Socket | undefined>((res) => {
+    const tunnel = await new Promise<TunnelSocket | undefined>((res) => {
       const timeout = setTimeout(() => {
         clearInterval(interval);
         res(undefined);
@@ -27,12 +28,12 @@ class TunnelsManager {
       const interval = setInterval(() => {
         const tunnel = this.tunnels[host]?.[0];
         if (tunnel) {
-          tunnel.emit("data");
+          tunnel.unavailable?.("data");
           clearTimeout(timeout);
           clearInterval(interval);
           res(tunnel);
         }
-      }, 50);
+      }, 100);
     });
 
     if (!tunnel) {
@@ -51,7 +52,7 @@ class TunnelsManager {
     return tunnel;
   }
 
-  push(host: string, tunnel: net.Socket) {
+  push(host: string, tunnel: TunnelSocket) {
     logger.log(`PROXY: New tunnel attached to handle requests from ${host}`);
     this.tunnels[host] = this.tunnels[host] || [];
     this.tunnels[host].push(tunnel);
@@ -60,7 +61,7 @@ class TunnelsManager {
     );
   }
 
-  remove(host: string, tunnel: net.Socket, reason: string) {
+  remove(host: string, tunnel: TunnelSocket, reason: string) {
     const initialSize = this.tunnels[host]?.length || 0;
     this.tunnels[host] = this.tunnels[host]?.filter((socket) => {
       if (socket === tunnel) {

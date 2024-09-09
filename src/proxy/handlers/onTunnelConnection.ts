@@ -1,9 +1,10 @@
 import net from "net";
 import { tunnelsManager } from "./structures";
 import { UNAVAILABLE_EVENTS } from "../../constants";
+import { TunnelSocket } from "../types";
 
 const onTunnelConnection = (
-  tunnelSocket: net.Socket,
+  tunnelSocket: TunnelSocket,
   unavailableTimeoutInMilliseconds: number
 ) => {
   tunnelSocket.once("data", (data) => {
@@ -14,14 +15,18 @@ const onTunnelConnection = (
       tunnelSocket.end();
     }, unavailableTimeoutInMilliseconds);
 
+    const onUnavailable = (reason: string) => {
+      clearTimeout(timeout);
+      if (reason !== "data") {
+        tunnelSocket.end();
+      }
+      tunnelsManager.remove(host, tunnelSocket, reason);
+    };
+
+    tunnelSocket.unavailable = onUnavailable;
+
     UNAVAILABLE_EVENTS.forEach((event) => {
-      tunnelSocket.once(event, () => {
-        clearTimeout(timeout);
-        if (event !== "data") {
-          tunnelSocket.end();
-        }
-        tunnelsManager.remove(host, tunnelSocket, event);
-      });
+      tunnelSocket.once(event, () => onUnavailable(event));
     });
 
     tunnelsManager.push(host, tunnelSocket);
