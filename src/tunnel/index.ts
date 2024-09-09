@@ -25,13 +25,11 @@ export const createTunnel = ({
     const tunnelSymbol = Symbol();
     const forwardedConnection = net.createConnection({
       keepAlive: true,
-      allowHalfOpen: true,
       host: forwardedHost,
       port: forwardedPort,
     });
     const proxyConnection = net.createConnection({
       keepAlive: true,
-      allowHalfOpen: true,
       host: proxyHost,
       port: proxyPort,
     });
