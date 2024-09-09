@@ -10,16 +10,13 @@ const onTunnelConnection = (
     const host = data.toString();
     if (!host) return tunnelSocket.end();
 
-    let willTimeout = true;
-    setTimeout(() => {
-      if (willTimeout) {
-        tunnelSocket.end();
-      }
+    const timeout = setTimeout(() => {
+      tunnelSocket.end();
     }, unavailableTimeoutInMilliseconds);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
-      tunnelSocket.on(event, () => {
-        willTimeout = false;
+      tunnelSocket.once(event, () => {
+        clearTimeout(timeout);
         if (event !== "data") {
           tunnelSocket.end();
         }

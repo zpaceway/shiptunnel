@@ -25,29 +25,28 @@ export const createTunnel = ({
     const tunnelSymbol = Symbol();
     const forwardedConnection = net.createConnection({
       keepAlive: true,
+      allowHalfOpen: true,
       host: forwardedHost,
       port: forwardedPort,
     });
     const proxyConnection = net.createConnection({
       keepAlive: true,
+      allowHalfOpen: true,
       host: proxyHost,
       port: proxyPort,
     });
 
     bindSokets(forwardedConnection, proxyConnection);
 
-    let willTimeout = true;
-    setTimeout(() => {
-      if (willTimeout) {
-        forwardedConnection.end();
-        proxyConnection.end();
-      }
+    const timeout = setTimeout(() => {
+      forwardedConnection.end();
+      proxyConnection.end();
     }, unavailableTimeoutInMilliseconds);
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
-        conn.on(event, () => {
-          willTimeout = false;
+        conn.once(event, () => {
+          clearTimeout(timeout);
           if (event !== "data") {
             forwardedConnection.end();
             proxyConnection.end();
