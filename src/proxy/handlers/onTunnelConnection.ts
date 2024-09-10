@@ -12,7 +12,7 @@ const onTunnelConnection = (
     if (!host) return tunnelSocket.end();
 
     const timeout = setTimeout(() => {
-      tunnelSocket.end();
+      onUnavailable("timeout");
     }, unavailableTimeoutInMilliseconds);
 
     const onUnavailable = (reason: string) => {
