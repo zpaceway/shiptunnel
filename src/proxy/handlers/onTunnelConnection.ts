@@ -12,7 +12,7 @@ const onTunnelConnection = (
 
     const timeout = setTimeout(() => {
       onUnavailable("timeout");
-    }, unavailableTimeoutInMilliseconds);
+    }, unavailableTimeoutInMilliseconds / 2 + (unavailableTimeoutInMilliseconds / 2) * Math.random());
 
     const onUnavailable = (reason: string) => {
       clearTimeout(timeout);

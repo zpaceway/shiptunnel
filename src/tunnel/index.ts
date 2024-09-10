@@ -39,7 +39,7 @@ export const createTunnel = ({
     const timeout = setTimeout(() => {
       forwardedConnection.end();
       proxyConnection.end();
-    }, unavailableTimeoutInMilliseconds);
+    }, unavailableTimeoutInMilliseconds / 2 + (unavailableTimeoutInMilliseconds / 2) * Math.random());
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
