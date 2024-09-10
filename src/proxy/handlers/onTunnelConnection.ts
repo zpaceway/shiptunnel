@@ -1,4 +1,3 @@
-import net from "net";
 import { tunnelsManager } from "./structures";
 import { UNAVAILABLE_EVENTS } from "../../constants";
 import { TunnelSocket } from "../types";
