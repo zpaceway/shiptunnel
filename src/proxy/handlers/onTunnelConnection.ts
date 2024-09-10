@@ -1,6 +1,7 @@
 import { tunnelsManager } from "./structures";
 import { UNAVAILABLE_EVENTS } from "../../constants";
 import { TunnelSocket } from "../types";
+import { getRandomTimeoutValueInMilliseconds } from "../../communication";
 
 const onTunnelConnection = (
   tunnelSocket: TunnelSocket,
@@ -10,12 +11,15 @@ const onTunnelConnection = (
     const host = data.toString();
     if (!host) return tunnelSocket.end();
 
-    const timeout = setTimeout(() => {
+    const interval = setInterval(() => {
+      if (!tunnelsManager.tunnels[host]?.length) return;
+
+      clearInterval(interval);
       onUnavailable("timeout");
-    }, unavailableTimeoutInMilliseconds / 2 + (unavailableTimeoutInMilliseconds / 2) * Math.random());
+    }, getRandomTimeoutValueInMilliseconds(unavailableTimeoutInMilliseconds));
 
     const onUnavailable = (reason: string) => {
-      clearTimeout(timeout);
+      clearTimeout(interval);
       if (reason !== "data") {
         tunnelSocket.end();
       }

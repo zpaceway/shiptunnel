@@ -2,7 +2,10 @@ import net from "net";
 import { logger } from "../monitoring";
 import { UNAVAILABLE_EVENTS } from "../constants";
 import { CreateTunnelOptions } from "./types";
-import { bindSokets } from "../communication";
+import {
+  bindSokets,
+  getRandomTimeoutValueInMilliseconds,
+} from "../communication";
 
 export const createTunnel = ({
   forwardedHost,
@@ -36,15 +39,18 @@ export const createTunnel = ({
 
     bindSokets(forwardedConnection, proxyConnection);
 
-    const timeout = setTimeout(() => {
+    const interval = setInterval(() => {
+      if (!availableTunnels.length) return;
+
+      clearInterval(interval);
       forwardedConnection.end();
       proxyConnection.end();
-    }, unavailableTimeoutInMilliseconds / 2 + (unavailableTimeoutInMilliseconds / 2) * Math.random());
+    }, getRandomTimeoutValueInMilliseconds(unavailableTimeoutInMilliseconds));
 
     UNAVAILABLE_EVENTS.forEach((event) => {
       [forwardedConnection, proxyConnection].forEach((conn) => {
         conn.once(event, () => {
-          clearTimeout(timeout);
+          clearInterval(interval);
           if (event !== "data") {
             forwardedConnection.end();
             proxyConnection.end();

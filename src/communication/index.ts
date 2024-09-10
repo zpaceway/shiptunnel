@@ -17,3 +17,12 @@ export const bindSokets = (socket1: net.Socket, socket2: net.Socket) => {
   socket1.pipe(socket2, { end: true });
   socket2.pipe(socket1, { end: true });
 };
+
+export const getRandomTimeoutValueInMilliseconds = (
+  unavailableTimeoutInMilliseconds: number
+) => {
+  return (
+    unavailableTimeoutInMilliseconds / 2 +
+    (unavailableTimeoutInMilliseconds / 2) * Math.random()
+  );
+};
