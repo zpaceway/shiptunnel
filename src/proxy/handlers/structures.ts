@@ -33,7 +33,7 @@ class TunnelsManager {
           clearInterval(interval);
           res(tunnel);
         }
-      }, 100);
+      }, 20);
     });
 
     if (!tunnel) {
