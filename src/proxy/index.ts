@@ -1,4 +1,6 @@
 import net from "net";
+import http from "http";
+import ws from "ws";
 import onTunnelConnection from "./handlers/onTunnelConnection";
 import onClientConnection from "./handlers/onClientConnection";
 import { CreateProxyOptions } from "./types";
@@ -9,23 +11,22 @@ export const createProxy = ({
   proxyPort,
   clientPort,
   clientHost,
-  unavailableTimeoutInMilliseconds,
   connectionTimeoutInMilliseconds,
 }: CreateProxyOptions) => {
   tunnelsManager.setConnectionTimeoutInMilliseconds(
     connectionTimeoutInMilliseconds
   );
 
-  const tunnelServer = net.createServer({
+  const tunnelServer = http.createServer({
     keepAlive: true,
   });
   const clientServer = net.createServer({
     keepAlive: true,
   });
 
-  tunnelServer.on("connection", (tunnelSocket) =>
-    onTunnelConnection(tunnelSocket, unavailableTimeoutInMilliseconds)
-  );
+  const tunnelWs = new ws.Server({ server: tunnelServer });
+
+  tunnelWs.on("connection", onTunnelConnection);
   clientServer.on("connection", onClientConnection);
 
   const listen = () => {

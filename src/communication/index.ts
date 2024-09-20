@@ -1,28 +1,14 @@
 import net from "net";
+import { TunnelSocket } from "../proxy/types";
 
-export const bindSokets = (socket1: net.Socket, socket2: net.Socket) => {
-  // [
-  //   [socket1, socket2],
-  //   [socket2, socket1],
-  // ].forEach(([s1, s2]) => {
-  //   s1!.once("close", () => s2!.end());
-  //   s1!.once("error", () => s2!.end());
-  //   s1!.once("timeout", () => s2!.end());
-  //   s1!.on("data", (data) => s2!.write(data));
-  //   s1!.once("end", () => {
-  //     s1!.destroy();
-  //     s2!.end();
-  //   });
-  // });
-  socket1.pipe(socket2, { end: true });
-  socket2.pipe(socket1, { end: true });
-};
+export const bindSokets = (socket1: net.Socket, socket2: TunnelSocket) => {
+  socket1.on("end", () => socket2.close());
+  socket1.on("error", () => socket2.close());
+  socket1.on("close", () => socket2.close());
+  socket1.on("timeout", () => socket2.close());
+  socket1.on("data", (data) => socket2.send(data));
 
-export const getRandomTimeoutValueInMilliseconds = (
-  unavailableTimeoutInMilliseconds: number
-) => {
-  return (
-    unavailableTimeoutInMilliseconds / 2 +
-    (unavailableTimeoutInMilliseconds / 2) * Math.random()
-  );
+  socket2.on("error", () => socket1.end());
+  socket2.on("close", () => socket1.end());
+  socket2.on("message", (message) => socket1.write(message as Buffer));
 };

@@ -1,11 +1,8 @@
 import net from "net";
+import ws from "ws";
 import { logger } from "../monitoring";
-import { UNAVAILABLE_EVENTS } from "../constants";
 import { CreateTunnelOptions } from "./types";
-import {
-  bindSokets,
-  getRandomTimeoutValueInMilliseconds,
-} from "../communication";
+import { bindSokets } from "../communication";
 
 export const createTunnel = ({
   forwardedHost,
@@ -13,7 +10,6 @@ export const createTunnel = ({
   proxyPort,
   proxyHost,
   availability,
-  unavailableTimeoutInMilliseconds,
 }: CreateTunnelOptions) => {
   let availableTunnels: symbol[] = [];
 
@@ -26,59 +22,47 @@ export const createTunnel = ({
       `TUNNEL: Starting tunnel to connect proxy ${proxyHost}:${proxyPort} and forwarded: ${forwardedHost}:${forwardedPort}`
     );
     const tunnelSymbol = Symbol();
-    const forwardedConnection = net.createConnection({
-      keepAlive: true,
-      host: forwardedHost,
-      port: forwardedPort,
+    const proxyConnection = new ws.WebSocket(`ws://${proxyHost}:${proxyPort}`);
+
+    proxyConnection.once("message", (message) => {
+      proxyConnection.pause();
+
+      const forwardedConnection = net.createConnection({
+        keepAlive: true,
+        host: forwardedHost,
+        port: forwardedPort,
+      });
+      forwardedConnection.write(message as Buffer);
+      bindSokets(forwardedConnection, proxyConnection);
+      proxyConnection.resume();
+      _listen();
     });
-    const proxyConnection = net.createConnection({
-      keepAlive: true,
-      host: proxyHost,
-      port: proxyPort,
-    });
 
-    bindSokets(forwardedConnection, proxyConnection);
-
-    const interval = setInterval(() => {
-      if (!availableTunnels.length) return;
-
-      clearInterval(interval);
-      forwardedConnection.end();
-      proxyConnection.end();
-    }, getRandomTimeoutValueInMilliseconds(unavailableTimeoutInMilliseconds));
-
-    UNAVAILABLE_EVENTS.forEach((event) => {
-      [forwardedConnection, proxyConnection].forEach((conn) => {
-        conn.once(event, () => {
-          clearInterval(interval);
-          if (event !== "data") {
-            forwardedConnection.end();
-            proxyConnection.end();
-          }
-          const initialSize = availableTunnels.length;
-          availableTunnels = availableTunnels.filter(
-            (symbol) => symbol !== tunnelSymbol
+    ["close", "error", "message"].map((event) => {
+      proxyConnection.on(event, () => {
+        const initialSize = availableTunnels.length;
+        availableTunnels = availableTunnels.filter(
+          (symbol) => symbol !== tunnelSymbol
+        );
+        const finalSize = availableTunnels.length;
+        if (initialSize > finalSize) {
+          logger.log(
+            `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
           );
-          const finalSize = availableTunnels.length;
-          if (initialSize > finalSize) {
-            logger.log(
-              `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
-            );
-            logger.log(
-              `TUNNEL: New available tunnels: ${availableTunnels.length}`
-            );
-          }
-          _listen();
-        });
+          logger.log(
+            `TUNNEL: New available tunnels: ${availableTunnels.length}`
+          );
+        }
+        _listen();
       });
     });
 
-    proxyConnection.write(proxyHost);
+    proxyConnection.on("open", () => {
+      proxyConnection.send(proxyHost);
+      logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
+    });
 
     availableTunnels.push(tunnelSymbol);
-    logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
-
-    _listen();
   };
 
   return {

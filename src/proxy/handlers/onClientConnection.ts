@@ -22,7 +22,7 @@ const onClientConnection = (clientSocket: net.Socket) => {
     tunnelsManager.pop(host).then((tunnelSocket) => {
       if (!tunnelSocket) return clientSocket.end();
 
-      tunnelSocket.write(data);
+      tunnelSocket.send(data);
       bindSokets(clientSocket, tunnelSocket);
       clientSocket.resume();
     });
