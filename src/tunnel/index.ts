@@ -28,7 +28,6 @@ export const createTunnel = ({
       proxyConnection.pause();
 
       const forwardedConnection = net.createConnection({
-        keepAlive: true,
         host: forwardedHost,
         port: forwardedPort,
       });
@@ -39,7 +38,7 @@ export const createTunnel = ({
     });
 
     ["close", "error", "message"].map((event) => {
-      proxyConnection.on(event, () => {
+      proxyConnection.once(event, () => {
         const initialSize = availableTunnels.length;
         availableTunnels = availableTunnels.filter(
           (symbol) => symbol !== tunnelSymbol
@@ -57,7 +56,7 @@ export const createTunnel = ({
       });
     });
 
-    proxyConnection.on("open", () => {
+    proxyConnection.once("open", () => {
       proxyConnection.send(proxyHost);
       logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
     });
