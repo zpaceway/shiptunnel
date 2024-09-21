@@ -24,7 +24,10 @@ export const createProxy = ({
     keepAlive: true,
   });
 
-  const tunnelWs = new ws.Server({ server: tunnelServer });
+  const tunnelWs = new ws.Server({
+    server: tunnelServer,
+    perMessageDeflate: false,
+  });
 
   tunnelWs.on("connection", onTunnelConnection);
   clientServer.on("connection", onClientConnection);

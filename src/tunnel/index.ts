@@ -22,7 +22,9 @@ export const createTunnel = ({
       `TUNNEL: Starting tunnel to connect proxy ${proxyHost}:${proxyPort} and forwarded: ${forwardedHost}:${forwardedPort}`
     );
     const tunnelSymbol = Symbol();
-    const proxyConnection = new ws.WebSocket(`ws://${proxyHost}:${proxyPort}`);
+    const proxyConnection = new ws.WebSocket(`ws://${proxyHost}:${proxyPort}`, {
+      perMessageDeflate: false,
+    });
 
     proxyConnection.once("message", (message) => {
       proxyConnection.pause();
