@@ -28,6 +28,7 @@ export const createTunnel = ({
       proxyConnection.pause();
 
       const forwardedConnection = net.createConnection({
+        keepAlive: true,
         host: forwardedHost,
         port: forwardedPort,
       });
