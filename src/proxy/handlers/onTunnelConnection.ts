@@ -13,6 +13,7 @@ const onTunnelConnection = (tunnelSocket: TunnelSocket) => {
       tunnelsManager.remove(host, tunnelSocket, reason);
     };
 
+    tunnelSocket.on("ping", () => tunnelSocket.pong());
     tunnelSocket.unavailable = onUnavailable;
 
     ["message", "close", "error"].forEach((event) => {

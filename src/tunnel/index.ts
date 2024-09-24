@@ -26,6 +26,25 @@ export const createTunnel = ({
       perMessageDeflate: false,
     });
 
+    const onUnavailable = (reason: string) => {
+      const initialSize = availableTunnels.length;
+      availableTunnels = availableTunnels.filter(
+        (symbol) => symbol !== tunnelSymbol
+      );
+      const finalSize = availableTunnels.length;
+      if (initialSize > finalSize) {
+        logger.log(
+          `TUNNEL: Tunnel removed from available tunnels because of reason: ${reason}`
+        );
+        logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
+      }
+      _listen();
+    };
+
+    ["close", "error", "message"].map((event) => {
+      proxyConnection.once(event, () => onUnavailable(event));
+    });
+
     proxyConnection.once("message", (message) => {
       proxyConnection.pause();
 
@@ -40,27 +59,24 @@ export const createTunnel = ({
       _listen();
     });
 
-    ["close", "error", "message"].map((event) => {
-      proxyConnection.once(event, () => {
-        const initialSize = availableTunnels.length;
-        availableTunnels = availableTunnels.filter(
-          (symbol) => symbol !== tunnelSymbol
-        );
-        const finalSize = availableTunnels.length;
-        if (initialSize > finalSize) {
-          logger.log(
-            `TUNNEL: Tunnel removed from available tunnels because of event: ${event}`
-          );
-          logger.log(
-            `TUNNEL: New available tunnels: ${availableTunnels.length}`
-          );
-        }
-        _listen();
-      });
-    });
-
     proxyConnection.once("open", () => {
       proxyConnection.send(proxyHost);
+
+      const enqueuePing = () => {
+        setTimeout(() => {
+          const pongTimeout = setTimeout(() => {
+            onUnavailable("timeout");
+          });
+          proxyConnection.once("pong", () => {
+            clearTimeout(pongTimeout);
+            enqueuePing();
+          });
+          proxyConnection.ping();
+        }, 5000);
+      };
+
+      enqueuePing();
+
       logger.log(`TUNNEL: New available tunnels: ${availableTunnels.length}`);
     });
 
